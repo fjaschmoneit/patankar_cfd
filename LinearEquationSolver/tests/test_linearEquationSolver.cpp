@@ -63,7 +63,7 @@ TEST_F(linearEquationsFixture, solveSparseLinearSystem){
 
     // solutions = [1,2,3,4,5,.....]
     std::vector<double> solution(N);
-    std::iota(solution.begin(), solution.end(), 1.0);
+    std::iota(solution.begin(), solution.end(), 1.00);
 
     EXPECT_EQ(x, solution);
 }
