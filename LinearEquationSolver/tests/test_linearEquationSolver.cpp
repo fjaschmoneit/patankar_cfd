@@ -35,7 +35,7 @@ TEST_F(linearEquationsFixture, solveDenseLinearSystem) {
     Dense::GaussSeidel linEqs(A,b);
     std::vector<double> x = linEqs.solve();
 
-    std::vector<double> solution(N, 0.0);
+    std::vector<double> solution(N, 0.00);
     for (int i = 0; i < N; i++) {
         if (i%2 != 0)
             solution[i]++;
