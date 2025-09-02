@@ -43,7 +43,7 @@ std::vector<double> Dense::JacobiIter::solve()
        }
         x_old = x;
     }
-    std::cerr<<"Jacobi, solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
+    std::cerr<<"Jacobi solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
     return x;
 }
 
