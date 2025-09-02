@@ -6,7 +6,6 @@
 
 std::vector<double> Dense::GaussSeidel::solve()
 {
-
     const int n = (int)b_.size();
     if ((int)A_.size() != n) throw std::invalid_argument("A,b size mismatch");
     for (int i=0;i<n;++i) if ((int)A_[i].size()!=n) throw std::invalid_argument("A not square");
@@ -51,8 +50,6 @@ std::vector<double> Dense::GaussSeidel::solve()
     }
     std::cerr<<"Jacobi, solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
     return x;
-
-    return std::vector<double>(b_.size());
 }
 
 std::vector<double> Dense::JacobiIter::solve()
