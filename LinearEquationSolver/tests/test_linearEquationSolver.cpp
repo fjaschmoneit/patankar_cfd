@@ -19,7 +19,7 @@ struct linearEquationsFixture : public ::testing::Test
     std::vector<double> b;
     std::vector<double> solution;
 
-    void SetUp() override
+    void SetUp()
     {
         N = 6;
         A.assign(N, std::vector<double>(N, 0.0));
@@ -52,18 +52,18 @@ TEST_F(linearEquationsFixture, solveDenseJacobiLinearSystem)
     linearEquationsFixture::SetUp();
 
     Dense::JacobiIter linEqs(A,b);
-    std::vector<double> x = linEqs.solve();
+    const std::vector<double> x = linEqs.solve();
 
     EXPECT_EQ(x, solution);
 }
 
-TEST_F(linearEquationsFixture, solveGuissSeidelDenseLinearSystem)
+TEST_F(linearEquationsFixture, solveGaussSeidelDenseLinearSystem)
 {
 
     linearEquationsFixture::SetUp();
 
     Dense::GaussSeidel linEqs(A,b);
-    std::vector<double> x = linEqs.solve();
+    const std::vector<double> x = linEqs.solve();
 
     EXPECT_EQ(x, solution);
 }
