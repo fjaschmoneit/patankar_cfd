@@ -3,43 +3,67 @@
 #include "sparseMatrixSolvers.h"
 #include "denseMatrixSolvers.h"
 
+struct linearEquationsFixture : public ::testing::Test
+{
+    //    ( 2 1 0 0 0 0 )    ( x_0 )       (1)
+    //    ( 0 2 1 0 0 0 )    ( x_1 )       (2)
+    //    ( 0 0 2 1 0 0 )    ( x_2 )       (1)
+    //    ( 0 0 0 2 1 0 )  * ( x_3 )    =  (2)
+    //    ( 0 0 0 0 2 1 )    ( x_4 )       (1)
+    //    ( 0 0 0 0 0 2 )    ( x_5 )       (2)
+    //
+    // solution: x = (0, 1, 0, 1, 0, 1)ˆT
 
-struct linearEquationsFixture : public ::testing::Test {
+    int N = 0;
+    std::vector<std::vector<double>> A;
+    std::vector<double> b;
+    std::vector<double> solution;
 
+    void SetUp() override
+    {
+        N = 6;
+        A.assign(N, std::vector<double>(N, 0.0));
+        b.assign(N, 1.0);
+        solution.assign(N, 0.0);
+
+        for (int i = 0; i < N; i++)
+        {
+            A[i][i] = 2.0;
+            if (i != N-1)
+                A[i][i+1] = 1.0;
+            if (i % 2 != 0)
+                b[i]++;
+        }
+        solution.resize(N);
+        for (int i = 0; i < N; i++)
+        {
+            if (i%2 != 0)
+            {
+                solution[i]++;
+            }
+        }
+    }
 };
 
 
-//    ( 2 1 0 0 0 0 )    ( x_0 )       (1)
-//    ( 0 2 1 0 0 0 )    ( x_1 )       (2)
-//    ( 0 0 2 1 0 0 )    ( x_2 )       (1)
-//    ( 0 0 0 2 1 0 )  * ( x_3 )    =  (2)
-//    ( 0 0 0 0 2 1 )    ( x_4 )       (1)
-//    ( 0 0 0 0 0 2 )    ( x_5 )       (2)
-//
-// solution: x = (0, 1, 0, 1, 0, 1)ˆT
-TEST_F(linearEquationsFixture, solveDenseLinearSystem) {
+TEST_F(linearEquationsFixture, solveDenseJacobiLinearSystem)
+{
 
-    int N = 6;
+    linearEquationsFixture::SetUp();
 
-    std::vector<std::vector<double>> A(N, std::vector<double>(N, 0.0));
-    std::vector<double> b(N, 1.0);
+    Dense::JacobiIter linEqs(A,b);
+    std::vector<double> x = linEqs.solve();
 
-    for (int i = 0; i < N; i++) {
-        A[i][i] = 2.0;
-        if (i != N-1)
-            A[i][i+1] = 1.0;
-        if ( i%2 != 0)
-            b[i]++;
-    }
+    EXPECT_EQ(x, solution);
+}
+
+TEST_F(linearEquationsFixture, solveGuissSeidelDenseLinearSystem)
+{
+
+    linearEquationsFixture::SetUp();
 
     Dense::GaussSeidel linEqs(A,b);
     std::vector<double> x = linEqs.solve();
-
-    std::vector<double> solution(N, 0.00);
-    for (int i = 0; i < N; i++) {
-        if (i%2 != 0)
-            solution[i]++;
-    }
 
     EXPECT_EQ(x, solution);
 }
@@ -67,3 +91,4 @@ TEST_F(linearEquationsFixture, solveSparseLinearSystem){
 
     EXPECT_EQ(x, solution);
 }
+
