@@ -9,6 +9,9 @@ namespace Dense {
     protected:
         std::vector<std::vector<double>> A_;
         std::vector<double> b_;
+        double tolerance_ = 1e-18;
+        double maxIter_ = 1000;
+
 
     public:
 
@@ -20,14 +23,22 @@ namespace Dense {
         virtual std::vector<double> solve() = 0;
     };
 
-    class Jacobi : public IDenseLinearSolver {
+    class Jacobi : public IDenseLinearSolver
+    {
         public:
         using IDenseLinearSolver::IDenseLinearSolver;
         std::vector<double> solve() override ;
     };
 
-    class GaussSeidel : public IDenseLinearSolver {
+    class GaussSeidel : public IDenseLinearSolver
+    {
         public:
+        using IDenseLinearSolver::IDenseLinearSolver;
+        std::vector<double> solve() override ;
+    };
+    class JacobiIter : public IDenseLinearSolver
+    {
+    public:
         using IDenseLinearSolver::IDenseLinearSolver;
         std::vector<double> solve() override ;
     };

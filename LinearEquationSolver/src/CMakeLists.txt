@@ -3,6 +3,8 @@ add_library(linear_solver_lib STATIC
         sparseMatrixSolvers.cpp
         denseMatrixSolvers.cpp
         denseMatrixSolvers.h
+        MathUtils.cpp
+        MathUtils.h
 )
 
 # Set include directories for the library
