@@ -175,4 +175,3 @@ TEST_F(sparse_N6, solveSparseLinearSystem){
 
     EXPECT_EQ(x, solution);
 }
-
