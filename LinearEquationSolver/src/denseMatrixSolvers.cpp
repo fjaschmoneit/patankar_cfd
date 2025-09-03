@@ -42,13 +42,13 @@ std::vector<double> Dense::GaussSeidel::solve()
 
             x[i] = (-sum_terms + b_[i] ) / aii;
         }
-        if ( MathUtils::norm2(x,x_old) < tolerance_)
+        if ( MathUtils::diffNorm2(x,x_old) < tolerance_)
         {
-            std::cout<<"Jacobi solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
+            std::cout<<"Gauss Seidel solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
             return x;
         }
     }
-    std::cerr<<"Jacobi, solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
+    std::cerr<<"Gauss Seidel, solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
     return x;
 }
 
@@ -58,7 +58,7 @@ std::vector<double> Dense::JacobiIter::solve()
     const auto n = b_.size();
     x_old.resize(n);
     x.resize(n);
-    x_old.assign(n, 0);
+    x_old.assign(n, 1);
     double sum_terms = 0.0;
     for ( int k = 0; k < maxIter_; k++)
     {
@@ -78,8 +78,7 @@ std::vector<double> Dense::JacobiIter::solve()
 
             x[i] = (-sum_terms + b_[i] ) / A_[i][i];
         }
-
-        if ( MathUtils::norm2(x,x_old) < tolerance_)
+        if ( MathUtils::diffNorm2(x,x_old) < tolerance_)
         {
             std::cout<<"Jacobi solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
             return x;

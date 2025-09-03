@@ -19,7 +19,7 @@ struct linearEquationsFixture : public ::testing::Test
     std::vector<double> b;
     std::vector<double> solution;
 
-    void SetUp()
+    void SetUp() override
     {
         N = 6;
         A.assign(N, std::vector<double>(N, 0.0));
