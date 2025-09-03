@@ -42,7 +42,8 @@ std::vector<double> Dense::GaussSeidel::solve()
 
             x[i] = (-sum_terms + b_[i] ) / aii;
         }
-        if ( MathUtils::diffNorm2(x,x_old) < tolerance_)
+
+      if ( MathUtils::diffNorm2(x,x_old) < tolerance_)
         {
             std::cout<<"Gauss Seidel solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
             return x;
