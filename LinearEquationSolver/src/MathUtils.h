@@ -7,7 +7,7 @@
 
 class MathUtils
 {
-    public:
+public:
     // ||x - y||_2  (Euclidean norm of the difference)
     static double diffNorm2(const std::vector<double>& x,
                         const std::vector<double>& y);
