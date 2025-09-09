@@ -4,6 +4,7 @@
 
 #include "MathUtils.h"
 #include <cmath>
+#include <numeric>
 #include <stdexcept>
 #include <vector>
 
