@@ -2,6 +2,47 @@
 #include <gtest/gtest.h>
 #include "sparseMatrixSolvers.h"
 #include "denseMatrixSolvers.h"
+#include <blaze/Math.h>
+#include <MathUtils.h>
+
+void timer(const std::string& command) {
+    static std::chrono::high_resolution_clock::time_point start_time;
+
+    if (command == "start") {
+        start_time = std::chrono::high_resolution_clock::now();
+    }
+    else if (command == "end") {
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        std::cout << "Time: " << duration.count() << " ms\n";
+    }
+}
+
+// to do, move this function to another place
+blaze::DynamicMatrix<double> toBlaze(const std::vector<std::vector<double>>& v) {
+    if( v.empty() ) return blaze::DynamicMatrix<double>();   // tom matrix
+
+    const size_t m = v.size();       // antal rækker
+    const size_t n = v[0].size();    // antal kolonner
+
+    blaze::DynamicMatrix<double> A(m, n);
+
+    for (size_t i = 0; i < m; ++i) {
+        // evt. tjek at v[i].size() == n, ellers er input ikke rektangulært
+        for (size_t j = 0; j < n; ++j) {
+            A(i,j) = v[i][j];
+        }
+    }
+
+    return A;
+}
+
+// to do, move this function to another place
+blaze::DynamicVector<double> toBlaze(const std::vector<double>& v) {
+    blaze::DynamicVector<double> b( v.size() );           // allokér
+    std::copy(v.begin(), v.end(), b.begin());             // kopiér
+    return b;
+}
 
 void fillBandInDenseMatrix(std::vector<std::vector<double>>& A, const std::vector<double>& q, int bandOffset)
 {
@@ -68,6 +109,7 @@ struct sparse_N6 : public ::testing::Test
 // solution: x = (1, 2, 3, 4, ... , N)ˆT
 struct sparse_N : public ::testing::Test
 {
+    //only for problems bigger then 7
     std::vector<std::vector<double>> A;
     std::vector<double> b;
     std::vector<double> solution;
@@ -130,12 +172,54 @@ TEST_F(dense_N, denseSmallGaussSeidel) {
     EXPECT_EQ(x, solution);
 }
 
+TEST_F(sparse_N6, denseMidSizeJacobiMatrix) {
+    auto A_blaze = toBlaze(A);
+    auto b_blaze = toBlaze(b);
+
+    auto solution_blaze = toBlaze(solution);
+    Dense::JacobiIter linEqs(A_blaze,b_blaze);
+    timer("start");
+    auto x = linEqs.solve1();
+    timer("end");
+    EXPECT_EQ(x, solution_blaze);
+}
+
+TEST_F(sparse_N6, denseMidSizeJacobiSum) {
+    Dense::JacobiIter linEqs(A,b);
+    timer("start");
+    auto x = linEqs.solve();
+    timer("end");
+    EXPECT_EQ(x, solution);
+}
+
 TEST_F(sparse_N, denseMidSizeJacobi)
 {
     setProblemSize(20);
     Dense::JacobiIter linEqs(A,b);
+    timer("start");
     auto x = linEqs.solve();
-    EXPECT_EQ(x, solution);
+    timer("end");
+    for(int i = 0; i < x.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i],1e-10);
+    }
+}
+
+TEST_F(sparse_N, denseMidSizeJacobiMatrix)
+{
+    setProblemSize(100);
+    auto A_blaze = toBlaze(A);
+    auto b_blaze = toBlaze(b);
+
+    auto solution_blaze = toBlaze(solution);
+    Dense::JacobiIter linEqs(A_blaze,b_blaze);
+    timer("start");
+    auto x = linEqs.solve1();
+    timer("end");
+    for(int i = 0; i < solution_blaze.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i],1e-10);
+    }
 }
 
 
@@ -175,4 +259,3 @@ TEST_F(sparse_N6, solveSparseLinearSystem){
 
     EXPECT_EQ(x, solution);
 }
-
