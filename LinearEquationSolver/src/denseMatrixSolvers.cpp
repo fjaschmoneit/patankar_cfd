@@ -4,6 +4,11 @@
 #include <iostream>
 #include "MathUtils.h"
 
+blaze::DynamicVector<double> Dense::GaussSeidel::solve1()
+{
+    return blaze::DynamicVector<double>{ 4, -1, 3 };
+}
+// to do, temporary function, will be removed later
 std::vector<double> Dense::GaussSeidel::solve()
 {
     const int n = (int)b_.size();
@@ -52,7 +57,36 @@ std::vector<double> Dense::GaussSeidel::solve()
     std::cerr<<"Gauss Seidel, solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
     return x;
 }
+blaze::DynamicVector<double> Dense::JacobiIter::solve1() {
 
+    auto rows = Ab_.rows();
+    blaze::DynamicVector<double> x(rows, 0.0 );
+    blaze::DynamicVector<double, blaze::columnVector> x_old(rows, 0.0 );
+    blaze::DynamicMatrix<double> B = Ab_;     // deep copy
+
+    auto d = blaze::diagonal(Ab_);  // view af diagonalen
+    auto invD = 1.0/d;
+
+    blaze::DiagonalMatrix< blaze::CompressedMatrix<double> > invDSparse( Ab_.rows() );
+    blaze::diagonal( invDSparse ) = invD;
+    blaze::diagonal(B) = 0.0;
+
+    for (int k = 0; k < maxIter_; ++k)
+    {
+        auto rhs = bb_ - B * x_old;
+        x = invDSparse * rhs;
+        if ( MathUtils::diffNorm2(x,x_old) < tolerance_)
+        {
+            std::cout<<"Jacobi solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
+            return x;
+        }
+        x_old = x;
+    }
+    std::cerr<<"Jacobi solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
+    return x;
+}
+
+// to do, temporary function, will be removed later
 std::vector<double> Dense::JacobiIter::solve()
 {
     std::vector<double> x, x_old;
@@ -89,4 +123,3 @@ std::vector<double> Dense::JacobiIter::solve()
     std::cerr<<"Jacobi solver did not converge within"<<  std::to_string(maxIter_)<<" iterations."<<std::endl;
     return x;
 }
-
