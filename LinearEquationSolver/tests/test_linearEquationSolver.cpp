@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include "sparseMatrixSolvers.h"
 #include "denseMatrixSolvers.h"
+#include <blaze/Math.h>
 #include <MathUtils.h>
 
 void timer(const std::string& command) {
@@ -21,6 +22,32 @@ struct param
 {
     static constexpr double tolerance_ = 1e-7;
 };
+
+// to do, move this function to another place
+blaze::DynamicMatrix<double> toBlaze(const std::vector<std::vector<double>>& v) {
+    if( v.empty() ) return blaze::DynamicMatrix<double>();   // tom matrix
+
+    const size_t m = v.size();       // antal rækker
+    const size_t n = v[0].size();    // antal kolonner
+
+    blaze::DynamicMatrix<double> A(m, n);
+
+    for (size_t i = 0; i < m; ++i) {
+        // evt. tjek at v[i].size() == n, ellers er input ikke rektangulært
+        for (size_t j = 0; j < n; ++j) {
+            A(i,j) = v[i][j];
+        }
+    }
+
+    return A;
+}
+
+// to do, move this function to another place
+blaze::DynamicVector<double> toBlaze(const std::vector<double>& v) {
+    blaze::DynamicVector<double> b( v.size() );           // allokér
+    std::copy(v.begin(), v.end(), b.begin());             // kopiér
+    return b;
+}
 
 void fillBandInDenseMatrix(std::vector<std::vector<double>>& A, const std::vector<double>& q, int bandOffset)
 {
