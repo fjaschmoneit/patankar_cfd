@@ -18,7 +18,7 @@ target_link_libraries(linear_solver_tests
         gtest_main
         linear_solver_lib
 )
-
+include_directories(/usr/local/include)
 # Include GoogleTest
 include(GoogleTest)
 gtest_discover_tests(linear_solver_tests)
