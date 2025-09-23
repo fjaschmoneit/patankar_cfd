@@ -2,7 +2,6 @@
 #include <gtest/gtest.h>
 #include "sparseMatrixSolvers.h"
 #include "denseMatrixSolvers.h"
-#include <blaze/Math.h>
 #include <MathUtils.h>
 
 void timer(const std::string& command) {
@@ -18,31 +17,11 @@ void timer(const std::string& command) {
     }
 }
 
-// to do, move this function to another place
-blaze::DynamicMatrix<double> toBlaze(const std::vector<std::vector<double>>& v) {
-    if( v.empty() ) return blaze::DynamicMatrix<double>();   // tom matrix
 
-    const size_t m = v.size();       // antal rækker
-    const size_t n = v[0].size();    // antal kolonner
-
-    blaze::DynamicMatrix<double> A(m, n);
-
-    for (size_t i = 0; i < m; ++i) {
-        // evt. tjek at v[i].size() == n, ellers er input ikke rektangulært
-        for (size_t j = 0; j < n; ++j) {
-            A(i,j) = v[i][j];
-        }
-    }
-
-    return A;
-}
-
-// to do, move this function to another place
-blaze::DynamicVector<double> toBlaze(const std::vector<double>& v) {
-    blaze::DynamicVector<double> b( v.size() );           // allokér
-    std::copy(v.begin(), v.end(), b.begin());             // kopiér
-    return b;
-}
+struct param
+{
+    static constexpr double tolerance_ = 1e-7;
+};
 
 void fillBandInDenseMatrix(std::vector<std::vector<double>>& A, const std::vector<double>& q, int bandOffset)
 {
@@ -68,6 +47,7 @@ void fillBandInDenseMatrix(std::vector<std::vector<double>>& A, const std::vecto
 struct sparse_N6 : public ::testing::Test
 {
     const int N = 6;
+
 
     std::vector<std::vector<double>> A;
     std::vector<double> b;
@@ -165,97 +145,113 @@ struct dense_N : public ::testing::Test {
     }
 };
 
-TEST_F(dense_N, denseSmallGaussSeidel) {
-    setProblemSize(60);         //
+TEST_F(dense_N, denseSmallGaussSeidelMatrix)
+{
+    setProblemSize(60);
     Dense::GaussSeidel linEqs(A,b);
     auto x = linEqs.solve();
-    EXPECT_EQ(x, solution);
-}
-
-TEST_F(sparse_N6, denseMidSizeJacobiMatrix) {
-    auto A_blaze = toBlaze(A);
-    auto b_blaze = toBlaze(b);
-
-    auto solution_blaze = toBlaze(solution);
-    Dense::JacobiIter linEqs(A_blaze,b_blaze);
-    timer("start");
-    auto x = linEqs.solve1();
-    timer("end");
-    EXPECT_EQ(x, solution_blaze);
-}
-
-TEST_F(sparse_N6, denseMidSizeJacobiSum) {
-    Dense::JacobiIter linEqs(A,b);
-    timer("start");
-    auto x = linEqs.solve();
-    timer("end");
-    EXPECT_EQ(x, solution);
-}
-
-TEST_F(sparse_N, denseMidSizeJacobi)
-{
-    setProblemSize(20);
-    Dense::JacobiIter linEqs(A,b);
-    timer("start");
-    auto x = linEqs.solve();
-    timer("end");
-    for(int i = 0; i < x.size(); i++)
+    for(int i = 0; i < solution.size(); i++)
     {
-        EXPECT_NEAR(x[i], solution[i],1e-10);
+        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
     }
+}
+
+TEST_F(dense_N, denseSmallJacobiMatrix)
+{
+    setProblemSize(60);
+    Dense::JacobiIter linEqs(A,b);
+    auto x = linEqs.solve();
+    for(int i = 0; i < solution.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
+    }
+}
+
+TEST_F(sparse_N6, denseMidSizeJacobiMatrix)
+{
+
+    Dense::JacobiIter linEqs(A,b);
+    auto x = linEqs.solve();
+    EXPECT_EQ(x, solution);
 }
 
 TEST_F(sparse_N, denseMidSizeJacobiMatrix)
 {
     setProblemSize(100);
-    auto A_blaze = toBlaze(A);
-    auto b_blaze = toBlaze(b);
-
-    auto solution_blaze = toBlaze(solution);
-    Dense::JacobiIter linEqs(A_blaze,b_blaze);
-    timer("start");
-    auto x = linEqs.solve1();
-    timer("end");
-    for(int i = 0; i < solution_blaze.size(); i++)
+    Dense::JacobiIter linEqs(A,b);
+    auto x = linEqs.solve();
+    for(int i = 0; i < solution.size(); i++)
     {
-        EXPECT_NEAR(x[i], solution[i],1e-10);
+        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
+    }
+}
+TEST_F(sparse_N, dense1MidSizeBiCGSTABMatrix)
+{
+    setProblemSize(100);
+    Dense::BiCGSTAB linEqs(A,b);
+    auto x = linEqs.solve();
+    for(int i = 0; i < solution.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
     }
 }
 
-
-
-TEST_F(sparse_N6, solveDenseJacobiLinearSystem)
+TEST_F(sparse_N, sparseMidSizeBiCGSTABMatrix)
 {
-    Dense::JacobiIter linEqs(A,b);
-    EXPECT_EQ(linEqs.solve(), solution);
+    setProblemSize(100);
+    Sparse::BiCGSTAB linEqs(A,b);
+    auto x = linEqs.solve();
+    for(int i = 0; i < solution.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
+    }
 }
 
-TEST_F(sparse_N6, solveGaussSeidelDenseLinearSystem)
+TEST_F(sparse_N, CheckSolverCanExecuteTwoTimes)
 {
-    Dense::GaussSeidel linEqs(A,b);
-    EXPECT_EQ(linEqs.solve(), solution);
+
+    setProblemSize(100);
+    Dense::JacobiIter  linEqs_Jacobi            (A,b);
+    Dense::GaussSeidel linEqs_GaussSeidel       (A,b);
+    Dense::BiCGSTAB    linEqs_BiCGSTAB          (A,b);
+    Sparse::BiCGSTAB   linEqs_BiCGSTAB_sparse   (A,b);
+
+    auto x_jacobi = linEqs_Jacobi.solve();
+    auto x_gaussSeidel = linEqs_GaussSeidel.solve();
+    auto x_BiCGSTAB = linEqs_BiCGSTAB.solve();
+    auto x_BiCGSTAB_sparse = linEqs_BiCGSTAB_sparse.solve();
+
+    auto x_jacobi_second = linEqs_Jacobi.solve();
+    auto x_gaussSeidel_second = linEqs_GaussSeidel.solve();
+    auto x_BiCGSTAB_second = linEqs_BiCGSTAB.solve();
+    auto x_BiCGSTAB_sparse_second = linEqs_BiCGSTAB_sparse.solve();
+
+    EXPECT_EQ(x_jacobi, x_jacobi_second);
+    EXPECT_EQ(x_gaussSeidel, x_gaussSeidel_second);
+    EXPECT_EQ(x_BiCGSTAB, x_BiCGSTAB_second);
+    EXPECT_EQ(x_BiCGSTAB_sparse, x_BiCGSTAB_sparse_second);
+
+
 }
 
+TEST_F(sparse_N, denseAll)
+{
+    setProblemSize(200);
+    Dense::JacobiIter  linEqs_Jacobi          (A,b);
+    Dense::GaussSeidel linEqs_GaussSeidel     (A,b);
+    Dense::BiCGSTAB    linEqs_BiCGSTAB        (A,b);
+    Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (A,b);
 
-
-
-TEST_F(sparse_N6, solveSparseLinearSystem){
-
-    int N = 10;
-
-    // diagonal and off-diagonals:
-    std::vector<double> d0(N, -2.0);
-    std::vector<double> d1(N-1, 1.0);
-
-    std::vector<double> b(N, 0.0);
-    b[N-1] = -(N+1);
-
-    Sparse::GaussSeidel linEqs(d1,d0,d1,b);
-    std::vector<double> x = linEqs.solve();
-
-    // solutions = [1,2,3,4,5,.....]
-    std::vector<double> solution(N);
-    std::iota(solution.begin(), solution.end(), 1.00);
-
-    EXPECT_EQ(x, solution);
+    timer("start");
+    auto x_jacobi = linEqs_Jacobi.solve();
+    timer("end");
+    timer("start");
+    auto x_gaussSeidel = linEqs_GaussSeidel.solve();
+    timer("end");
+    timer("start");
+    auto x_BiCGSTB = linEqs_BiCGSTAB.solve();
+    timer("end");
+    timer("start");
+    auto x_BiCGSTAB_Sparse = linEqs_BiCGSTAB_Sparse.solve();
+    timer("end");
 }
