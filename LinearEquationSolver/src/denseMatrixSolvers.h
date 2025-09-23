@@ -9,6 +9,7 @@ namespace Dense {
     class IDenseLinearSolver {
     protected:
 
+
         blaze::DynamicMatrix<double> A_;
         blaze::DynamicVector<double> b_;
         blaze::DynamicVector<double> x0_;
@@ -25,12 +26,14 @@ namespace Dense {
         virtual ~IDenseLinearSolver() = default;
 
         virtual std::vector<double> solve() = 0;
+        virtual blaze::DynamicVector<double> solve1() = 0;
     };
 
     class GaussSeidel : public IDenseLinearSolver
     {
         public:
         using IDenseLinearSolver::IDenseLinearSolver;
+
         std::vector<double>  solve() override ;
     };
     class JacobiIter : public IDenseLinearSolver
@@ -39,7 +42,9 @@ namespace Dense {
         using IDenseLinearSolver::IDenseLinearSolver;
 
         std::vector<double> solve() override ;
+        blaze::DynamicVector<double> solve1() override ;
     };
+
 
     class BiCGSTAB : public IDenseLinearSolver
     {

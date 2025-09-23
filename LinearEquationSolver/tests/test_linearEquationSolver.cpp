@@ -18,6 +18,7 @@ void timer(const std::string& command) {
     }
 }
 
+
 struct param
 {
     static constexpr double tolerance_ = 1e-7;
@@ -73,6 +74,7 @@ void fillBandInDenseMatrix(std::vector<std::vector<double>>& A, const std::vecto
 struct sparse_N6 : public ::testing::Test
 {
     const int N = 6;
+
 
     std::vector<std::vector<double>> A;
     std::vector<double> b;
@@ -221,6 +223,7 @@ TEST_F(sparse_N, dense1MidSizeBiCGSTABMatrix)
     }
 }
 
+
 TEST_F(sparse_N, sparseMidSizeBiCGSTABMatrix)
 {
     setProblemSize(100);
@@ -240,6 +243,7 @@ TEST_F(sparse_N, CheckSolverCanExecuteTwoTimes)
     Dense::GaussSeidel linEqs_GaussSeidel       (A,b);
     Dense::BiCGSTAB    linEqs_BiCGSTAB          (A,b);
     Sparse::BiCGSTAB   linEqs_BiCGSTAB_sparse   (A,b);
+
 
     auto x_jacobi = linEqs_Jacobi.solve();
     auto x_gaussSeidel = linEqs_GaussSeidel.solve();
