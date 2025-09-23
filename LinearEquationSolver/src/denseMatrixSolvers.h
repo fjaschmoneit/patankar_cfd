@@ -26,7 +26,6 @@ namespace Dense {
         virtual ~IDenseLinearSolver() = default;
 
         virtual std::vector<double> solve() = 0;
-        virtual blaze::DynamicVector<double> solve1() = 0;
     };
 
     class GaussSeidel : public IDenseLinearSolver
@@ -42,9 +41,7 @@ namespace Dense {
         using IDenseLinearSolver::IDenseLinearSolver;
 
         std::vector<double> solve() override ;
-        blaze::DynamicVector<double> solve1() override ;
     };
-
 
     class BiCGSTAB : public IDenseLinearSolver
     {
