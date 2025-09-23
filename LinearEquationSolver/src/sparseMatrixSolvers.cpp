@@ -5,13 +5,13 @@
 blaze::DynamicMatrix<double> inline toBlaze(const std::vector<std::vector<double>>& v) {
     if( v.empty() ) return blaze::DynamicMatrix<double>();   // tom matrix
 
-    const size_t m = v.size();       // antal rækker
-    const size_t n = v[0].size();    // antal kolonner
+    const size_t m = v.size();
+    const size_t n = v[0].size();
 
     blaze::DynamicMatrix<double> A(m, n);
 
     for (size_t i = 0; i < m; ++i) {
-        // evt. tjek at v[i].size() == n, ellers er input ikke rektangulært
+
         for (size_t j = 0; j < n; ++j) {
             A(i,j) = v[i][j];
         }
@@ -22,8 +22,8 @@ blaze::DynamicMatrix<double> inline toBlaze(const std::vector<std::vector<double
 
 // to do, move this function to another place
 blaze::DynamicVector<double> inline toBlaze(const std::vector<double>& v) {
-    blaze::DynamicVector<double> b( v.size() );           // allokér
-    std::copy(v.begin(), v.end(), b.begin());             // kopiér
+    blaze::DynamicVector<double> b( v.size() );
+    std::copy(v.begin(), v.end(), b.begin());
     return b;
 }
 
@@ -66,12 +66,12 @@ std::vector<double> Sparse::BiCGSTAB::solve()
     double rho  = dot(r0, r0);
     double alpha = 0.0, omega = 0.0, rho1 = 0.0, beta = 0.0;
 
-    const double normb = std::max(norm(b_), 1e-30);
-    double normres = norm(r0);
-    double relres  = normres / normb;
+    const double norm_b = std::max(norm(b_), 1e-30);
+    double norm_res = norm(r0);
+    double rel_res  = norm_res / norm_b;
 
     std::size_t it = 0;
-    while (relres > tolerance_ && it < maxIter_)
+    while (rel_res > tolerance_ && it < maxIter_)
     {
         v    = A_ * p;
         double vr0 = dot(v, r0);
@@ -96,15 +96,15 @@ std::vector<double> Sparse::BiCGSTAB::solve()
         p = r + beta * (p - omega * v);
         rho = rho1;
 
-        normres = norm(r);
-        relres  = normres / normb;
+        norm_res = norm(r);
+        rel_res  = norm_res / norm_b;
         ++it;
     }
 
-    if (relres <= tolerance_)
-        std::cout << "BiCGSTAB_sparse converged in " << it << " iterations.\n";
+    if (rel_res <= tolerance_)
+        std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations.\n";
     else
-        std::cout << "BiCGSTAB_sparse NOT converged (iters=" << it << ", relres=" << relres << ").\n";
+        std::cout << "Bi_CG_STAB_sparse NOT converged (iters=" << it << ", rel res=" << rel_res << ").\n";
 
 
     return {x.begin(), x.end()};
