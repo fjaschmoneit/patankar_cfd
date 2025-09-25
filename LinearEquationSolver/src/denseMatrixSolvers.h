@@ -9,7 +9,6 @@ namespace Dense {
     class IDenseLinearSolver {
     protected:
 
-
         blaze::DynamicMatrix<double> A_;
         blaze::DynamicVector<double> b_;
         blaze::DynamicVector<double> x0_;

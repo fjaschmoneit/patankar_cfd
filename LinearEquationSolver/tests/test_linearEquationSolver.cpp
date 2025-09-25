@@ -48,7 +48,6 @@ struct sparse_N6 : public ::testing::Test
 {
     const int N = 6;
 
-
     std::vector<std::vector<double>> A;
     std::vector<double> b;
     std::vector<double> solution;
@@ -185,6 +184,7 @@ TEST_F(sparse_N, denseMidSizeJacobiMatrix)
         EXPECT_NEAR(x[i], solution[i],param::tolerance_);
     }
 }
+
 TEST_F(sparse_N, dense1MidSizeBiCGSTABMatrix)
 {
     setProblemSize(100);
@@ -234,6 +234,7 @@ TEST_F(sparse_N, CheckSolverCanExecuteTwoTimes)
 
 }
 
+// why is this test called denseAll? What should this test demonstrate?
 TEST_F(sparse_N, denseAll)
 {
     setProblemSize(200);

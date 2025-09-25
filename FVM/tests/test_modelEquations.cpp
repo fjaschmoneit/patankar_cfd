@@ -46,18 +46,18 @@ struct laplaceTests : public ::testing::Test {
 
 
 
-// 2D Laplace Equation with constant BCs
+// 2D Laplace Equation with local BCs
 //
 // Problem Setup:
 // - Domain: 0 ≤ x ≤ 1, 0 ≤ y ≤ 1 (rectangular)
 // - ODE: ∇²φ = 0
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,1) = 1,  φ(1,y) = 1
+// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,1) = x,  φ(1,y) = y
 //
 // Analytical Solution:
 // φ(x,y) = y*x
-TEST_F(laplaceTests, constDerichletBCs) {
+TEST_F(laplaceTests, localDerichletBCs) {
     setUp(21);
 
     // ---------  solve problem and write solution in 'field' container ------------
