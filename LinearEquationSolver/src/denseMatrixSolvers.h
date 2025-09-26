@@ -31,6 +31,7 @@ namespace Dense {
     {
         public:
         using IDenseLinearSolver::IDenseLinearSolver;
+
         std::vector<double>  solve() override ;
     };
     class JacobiIter : public IDenseLinearSolver

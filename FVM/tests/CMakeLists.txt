@@ -1,4 +1,3 @@
-# Download and configure GoogleTest
 include(FetchContent)
 FetchContent_Declare(
         googletest
@@ -8,18 +7,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 # Create test executable
-add_executable(linear_solver_tests
-        test_linearEquationSolver.cpp
+add_executable(modelEquation_tests
+        test_modelEquations.cpp
 )
 
 # Link with GoogleTest and our static library
-target_link_libraries(linear_solver_tests
+target_link_libraries(modelEquation_tests
         PRIVATE
         gtest_main
         linear_solver_lib
 )
-include_directories(/usr/local/include)
 
 # Include GoogleTest
 include(GoogleTest)
-gtest_discover_tests(linear_solver_tests)
+gtest_discover_tests(modelEquation_tests)
