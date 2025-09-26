@@ -54,6 +54,7 @@ void takeUpperOrLowerStrictlyTriangular(blaze::DynamicMatrix<double>& T, bool is
 }
 
 
+
 blaze::DynamicMatrix<double> copyStrictlyUpperTriangular(const blaze::DynamicMatrix<double>& A)
 {
     blaze::DynamicMatrix<double> R = A;

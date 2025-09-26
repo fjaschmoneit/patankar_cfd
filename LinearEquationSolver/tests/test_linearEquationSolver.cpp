@@ -48,6 +48,7 @@ struct sparse_N6 : public ::testing::Test
 {
     const int N = 6;
 
+
     std::vector<std::vector<double>> A;
     std::vector<double> b;
     std::vector<double> solution;
@@ -144,6 +145,7 @@ struct dense_N : public ::testing::Test {
     }
 };
 
+
 TEST_F(dense_N, denseSmallGaussSeidelMatrix)
 {
     setProblemSize(60);
@@ -166,8 +168,10 @@ TEST_F(dense_N, denseSmallJacobiMatrix)
     }
 }
 
+
 TEST_F(sparse_N6, denseMidSizeJacobiMatrix)
 {
+
 
     Dense::JacobiIter linEqs(A,b);
     auto x = linEqs.solve();
@@ -195,6 +199,7 @@ TEST_F(sparse_N, dense1MidSizeBiCGSTABMatrix)
         EXPECT_NEAR(x[i], solution[i],param::tolerance_);
     }
 }
+
 
 TEST_F(sparse_N, sparseMidSizeBiCGSTABMatrix)
 {
