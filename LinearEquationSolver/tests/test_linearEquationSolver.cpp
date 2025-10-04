@@ -2,7 +2,9 @@
 #include <gtest/gtest.h>
 #include "sparseMatrixSolvers.h"
 #include "denseMatrixSolvers.h"
-#include <MathUtils.h>
+
+#include "globalTypeDefs.h"
+#include <blaze/Math.h>
 
 void timer(const std::string& command) {
     static std::chrono::high_resolution_clock::time_point start_time;
@@ -17,13 +19,14 @@ void timer(const std::string& command) {
     }
 }
 
-
 struct param
 {
     static constexpr double tolerance_ = 1e-7;
 };
 
-void fillBandInDenseMatrix(std::vector<std::vector<double>>& A, const std::vector<double>& q, int bandOffset)
+
+
+void fillBandInDenseMatrix(std::vector<std::vector<GLOBAL::scalar>>& A, const std::vector<GLOBAL::scalar>& q, int bandOffset)
 {
     int n = A.size();
     for (int i = 0; i < n; ++i)
@@ -49,17 +52,17 @@ struct sparse_N6 : public ::testing::Test
     const int N = 6;
 
 
-    std::vector<std::vector<double>> A;
-    std::vector<double> b;
-    std::vector<double> solution;
+    std::vector<std::vector<GLOBAL::scalar>> A;
+    std::vector<GLOBAL::scalar> b;
+    std::vector<GLOBAL::scalar> solution;
 
     sparse_N6()
-    : A(N, std::vector<double>(N)),
+    : A(N, std::vector<GLOBAL::scalar>(N)),
     b(N, 1.0),
     solution(N,0.0)
     {
-        fillBandInDenseMatrix(A, std::vector<double>(N, 2), 0);
-        fillBandInDenseMatrix(A, std::vector<double>(N-1, 1), 1);
+        fillBandInDenseMatrix(A, std::vector<GLOBAL::scalar>(N, 2), 0);
+        fillBandInDenseMatrix(A, std::vector<GLOBAL::scalar>(N-1, 1), 1);
 
         for (int i = 0; i < N; i++)
         {
@@ -70,7 +73,6 @@ struct sparse_N6 : public ::testing::Test
         }
     }
 };
-
 
 //    ( -2 0 0 0 1 0 0 0 0 0 0 0 ...)    ( x_0 )       (3)
 //    ( 0 -2 0 0 0 1 0 0 0 0 0 0 ...)    ( x_1 )       (2)
@@ -90,14 +92,15 @@ struct sparse_N6 : public ::testing::Test
 struct sparse_N : public ::testing::Test
 {
     //only for problems bigger then 7
-    std::vector<std::vector<double>> A;
-    std::vector<double> b;
-    std::vector<double> solution;
+    std::vector<std::vector<GLOBAL::scalar>> A;
+    GLOBAL::vector b;
+    std::vector<GLOBAL::scalar> solution;
 
     void setProblemSize( const int N) {
         A.assign(N, std::vector<double>(N,0.0));
         b.assign(N,0.0);
         solution.assign(N,0.0);
+
 
         fillBandInDenseMatrix(A, std::vector<double>(N, -2.0), 0);
         fillBandInDenseMatrix(A, std::vector<double>(N, 1.0), 4);
@@ -115,6 +118,57 @@ struct sparse_N : public ::testing::Test
     }
 };
 
+//    ( -2 0 0 0 1 0 0 0 0 0 0 0 ...)    ( x_0 )       (3)
+//    ( 0 -2 0 0 0 1 0 0 0 0 0 0 ...)    ( x_1 )       (2)
+//    ( 0 0 -2 0 0 0 1 0 0 0 0 0 ...)    ( x_2 )       (1)
+//    ( 0 0 0 -2 0 0 0 1 0 0 0 0 ...)  * ( x_3 )    =  (0)
+//    ( 1 0 0 0 0 -2 0 0 0 1 0 0 ...)    ( x_4 )       (0)
+//    ( 0 1 0 0 0 0 -2 0 0 0 1 0 ...)    ( x_5 )       (0)
+//              ......
+//    ( ... 0 0 0 1 0 0 0 -2 0 0 0 1)    ( x_N-5 )      (0)
+//    ( ... 0 0 0 0 1 0 0 0 -2 0 0 0)    ( x_N-4 )      (-N-1)
+//    ( ... 0 0 0 0 0 1 0 0 0 -2 0 0)    ( x_N-3 )      (-N-2)
+//    ( ... 0 0 0 0 0 0 1 0 0 0 -2 0)    ( x_N-2 )      (-N-3)
+//    ( ... 0 0 0 0 0 0 0 1 0 0 0 -2)    ( x_N-1 )      (-N-4)
+
+
+// solution: x = (1, 2, 3, 4, ... , N)ˆT
+struct sparse_NCoefficient : public ::testing::Test
+{
+    //only for problems bigger then 7
+    GLOBAL::vector ap;
+    GLOBAL::vector aw;
+    GLOBAL::vector an;
+    GLOBAL::vector as;
+    GLOBAL::vector ae;
+    GLOBAL::vector b;
+    GLOBAL::vector solution;
+
+    void setProblemSize( const int N) {
+        auto N2nd = N*N;
+        b.assign(N2nd,0.0);
+        solution.assign(N2nd,0.0);
+
+        auto valueAp = 4;
+        auto value_coefficents = 1;
+        ap.assign(N2nd, valueAp);
+        ae.assign(N2nd,-value_coefficents);
+        aw.assign(N2nd,-value_coefficents);
+        as.assign(N2nd,-value_coefficents);
+        an.assign(N2nd,-value_coefficents);
+        std::iota(solution.begin(), solution.end(), 1);
+        blaze::DynamicMatrix<GLOBAL::scalar> A(N2nd, N2nd, 0.0);
+
+        std::vector<GLOBAL::scalar> value_coefficents_Blaze(solution.begin(),    solution.end());
+        blaze::band(A, 0) = valueAp;
+        blaze::band(A, 1) =  -value_coefficents;
+        blaze::band(A, -1) =  -value_coefficents;
+        blaze::band(A, -N) =  -value_coefficents;
+        blaze::band(A,  N) =  -value_coefficents;
+        b = GLOBAL::vector::toStd(A*solution.toBlaze());
+    }
+};
+
 
 
 //    Q = 0.5*N*(N+1)
@@ -128,14 +182,14 @@ struct sparse_N : public ::testing::Test
 //
 // solution: x = (1, 2, 3, 4, ... , N)ˆT
 struct dense_N : public ::testing::Test {
-    std::vector<std::vector<double>> A;
-    std::vector<double> b;
-    std::vector<double> solution;
+    std::vector<std::vector<GLOBAL::scalar>> A;
+    std::vector<GLOBAL::scalar> b;
+    std::vector<GLOBAL::scalar> solution;
 
     void setProblemSize(const int N) {
 
-        A.assign(N, std::vector<double>(N,1.0));
-        fillBandInDenseMatrix(A, std::vector<double>(N, 2.0), 0);
+        A.assign(N, std::vector<GLOBAL::scalar>(N,1.0));
+        fillBandInDenseMatrix(A, std::vector<GLOBAL::scalar>(N, 2.0), 0);
 
         b.assign(N,0.0);
         std::iota(b.begin(), b.end(), 1+0.5*N*(N+1) );
@@ -204,7 +258,7 @@ TEST_F(sparse_N, dense1MidSizeBiCGSTABMatrix)
 TEST_F(sparse_N, sparseMidSizeBiCGSTABMatrix)
 {
     setProblemSize(100);
-    Sparse::BiCGSTAB linEqs(A,b);
+    Sparse::BiCGSTAB linEqs(A,b,4);
     auto x = linEqs.solve();
     for(int i = 0; i < solution.size(); i++)
     {
@@ -219,7 +273,7 @@ TEST_F(sparse_N, CheckSolverCanExecuteTwoTimes)
     Dense::JacobiIter  linEqs_Jacobi            (A,b);
     Dense::GaussSeidel linEqs_GaussSeidel       (A,b);
     Dense::BiCGSTAB    linEqs_BiCGSTAB          (A,b);
-    Sparse::BiCGSTAB   linEqs_BiCGSTAB_sparse   (A,b);
+    Sparse::BiCGSTAB   linEqs_BiCGSTAB_sparse   (A,b,4);
 
     auto x_jacobi = linEqs_Jacobi.solve();
     auto x_gaussSeidel = linEqs_GaussSeidel.solve();
@@ -246,7 +300,7 @@ TEST_F(sparse_N, denseAll)
     Dense::JacobiIter  linEqs_Jacobi          (A,b);
     Dense::GaussSeidel linEqs_GaussSeidel     (A,b);
     Dense::BiCGSTAB    linEqs_BiCGSTAB        (A,b);
-    Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (A,b);
+    Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (A,b,4);
 
     timer("start");
     auto x_jacobi = linEqs_Jacobi.solve();
@@ -260,4 +314,27 @@ TEST_F(sparse_N, denseAll)
     timer("start");
     auto x_BiCGSTAB_Sparse = linEqs_BiCGSTAB_Sparse.solve();
     timer("end");
+}
+
+TEST_F(sparse_NCoefficient, Using_Ap_Aw_An_As_Ae_as_input)
+{
+    auto N = 3;
+    setProblemSize(N);
+
+    Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (N);
+    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(ap,FVM::CardinalDirection::centre);
+    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(ae,FVM::CardinalDirection::east);
+    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(aw,FVM::CardinalDirection::west);
+    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(as,FVM::CardinalDirection::south);
+    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(an,FVM::CardinalDirection::north);
+    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(b,FVM::CardinalDirection::su);
+
+
+    auto x = linEqs_BiCGSTAB_Sparse.solve();
+    for(int i = 0; i < solution.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
+    }
+    int theEnd = 0;
+
 }

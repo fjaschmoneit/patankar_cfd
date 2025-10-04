@@ -10,12 +10,13 @@ FetchContent_MakeAvailable(googletest)
 add_executable(modelEquation_tests
         test_modelEquations.cpp
 )
-
+include_directories(/usr/local/include)
 # Link with GoogleTest and our static library
 target_link_libraries(modelEquation_tests
         PRIVATE
         gtest_main
         linear_solver_lib
+        modelEquation_lib
 )
 
 # Include GoogleTest
