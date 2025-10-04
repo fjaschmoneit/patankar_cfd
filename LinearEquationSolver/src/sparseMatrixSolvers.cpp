@@ -7,8 +7,10 @@ blaze::DynamicMatrix<GLOBAL::scalar> inline toBlaze(const std::vector<std::vecto
     if( v.empty() ) return blaze::DynamicMatrix<GLOBAL::scalar>();   // tom matrix
 
 
+
     const size_t m = v.size();
     const size_t n = v[0].size();
+
 
 
     blaze::DynamicMatrix<GLOBAL::scalar> A(m, n);
@@ -27,6 +29,8 @@ blaze::DynamicMatrix<GLOBAL::scalar> inline toBlaze(const std::vector<std::vecto
 // to do, move this function to another place
 blaze::DynamicVector<GLOBAL::scalar> inline toBlaze(const std::vector<GLOBAL::scalar>& v) {
     blaze::DynamicVector<GLOBAL::scalar> b( v.size() );
+
+
     std::copy(v.begin(), v.end(), b.begin());
     return b;
 }
@@ -142,11 +146,13 @@ std::vector<GLOBAL::scalar> Sparse::BiCGSTAB::solve()
     GLOBAL::scalar rho  = dot(r0, r0);
     GLOBAL::scalar alpha = 0.0, omega = 0.0, rho1 = 0.0, beta = 0.0;
 
+
     const GLOBAL::scalar normb = std::max(norm(b_.toBlaze()), 1e-30);
     GLOBAL::scalar normres = norm(r0);
     GLOBAL::scalar relres  = normres / normb;
 
     const double norm_b = std::max(norm(b_.toBlaze()), 1e-30);
+
     double norm_res = norm(r0);
     double rel_res  = norm_res / norm_b;
 

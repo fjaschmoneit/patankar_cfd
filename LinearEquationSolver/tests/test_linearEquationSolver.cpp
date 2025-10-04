@@ -52,9 +52,11 @@ struct sparse_N6 : public ::testing::Test
     const int N = 6;
 
 
+
     std::vector<std::vector<GLOBAL::scalar>> A;
     std::vector<GLOBAL::scalar> b;
     std::vector<GLOBAL::scalar> solution;
+
 
     sparse_N6()
     : A(N, std::vector<GLOBAL::scalar>(N)),
