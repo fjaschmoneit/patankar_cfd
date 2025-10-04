@@ -15,4 +15,6 @@ set_target_properties(linear_solver_lib PROPERTIES
 )
 
 # Add subdirectories
+add_subdirectory(src)
 add_subdirectory(tests)
+
