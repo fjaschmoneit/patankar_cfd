@@ -1,6 +1,7 @@
 
 #include <vector>
 #include <blaze/Math.h>
+#include "globalTypeDefs.h"
 
 
 namespace Dense {
@@ -9,22 +10,22 @@ namespace Dense {
     class IDenseLinearSolver {
     protected:
 
-        blaze::DynamicMatrix<double> A_;
-        blaze::DynamicVector<double> b_;
-        blaze::DynamicVector<double> x0_;
-        double tolerance_ = 1e-14;
-        double maxIter_ = 100000;
+        blaze::DynamicMatrix<GLOBAL::scalar> A_;
+        blaze::DynamicVector<GLOBAL::scalar> b_;
+        blaze::DynamicVector<GLOBAL::scalar> x0_;
+        GLOBAL::scalar tolerance_ = 1e-14;
+        GLOBAL::scalar maxIter_ = 100000;
 
 
     public:
-        void setX0(std::vector<double> x0);
+        void setX0(std::vector<GLOBAL::scalar> x0);
 
-        IDenseLinearSolver(const std::vector<std::vector<double>> &A, const std::vector<double> &b);
+        IDenseLinearSolver(const std::vector<std::vector<GLOBAL::scalar>> &A, const std::vector<GLOBAL::scalar> &b);
         //      : x0_(b_.size());
 
         virtual ~IDenseLinearSolver() = default;
 
-        virtual std::vector<double> solve() = 0;
+        virtual std::vector<GLOBAL::scalar> solve() = 0;
     };
 
     class GaussSeidel : public IDenseLinearSolver
@@ -32,14 +33,14 @@ namespace Dense {
         public:
         using IDenseLinearSolver::IDenseLinearSolver;
 
-        std::vector<double>  solve() override ;
+        std::vector<GLOBAL::scalar>  solve() override ;
     };
     class JacobiIter : public IDenseLinearSolver
     {
     public:
         using IDenseLinearSolver::IDenseLinearSolver;
 
-        std::vector<double> solve() override ;
+        std::vector<GLOBAL::scalar> solve() override ;
     };
 
     class BiCGSTAB : public IDenseLinearSolver
@@ -47,7 +48,7 @@ namespace Dense {
     public:
         using IDenseLinearSolver::IDenseLinearSolver;
 
-        std::vector<double>  solve() override ;
+        std::vector<GLOBAL::scalar>  solve() override ;
     };
 
 }
