@@ -74,7 +74,7 @@ TEST_F(laplaceTests, localDerichletBCs) {
     std::vector<double> solution( nx, 0.0 );
     for (unsigned int i=0; i < nx; i++) {
         auto x = 0.5;
-        auto y = ( 0.5 + i )*dx;
+        auto y = 1.0 - ( 0.5 + i )*dx;
         solution[i] = x*y;
     }
 
