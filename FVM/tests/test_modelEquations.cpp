@@ -56,7 +56,7 @@ void apply_Boundary(const GLOBAL::vector& value,std::vector<unsigned int> Faces,
     }
 }
 
-struct laplaceTests : public ::testing::Test {
+struct FVM_laplaceTests : public ::testing::Test {
     unsigned int nx=5;
     unsigned int ny=5;
     double dx=0.2;
@@ -111,7 +111,7 @@ struct laplaceTests : public ::testing::Test {
 //
 // Analytical Solution:
 // φ(x,y) = y*x
-TEST_F(laplaceTests, localDerichletBCs) {
+TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     //setUp(21);
     setUp(41);
     auto L = 1;
@@ -246,7 +246,7 @@ TEST_F(laplaceTests, localDerichletBCs) {
 //
 // Analytical Solution:
 // φ(x,y) = xˆ2-yˆ2
-TEST_F(laplaceTests, spacVarDerichletBCs) {
+TEST_F(FVM_laplaceTests, spacVarDerichletBCs) {
     //setUp(21);
     setUp(51);
     //setUp(3);

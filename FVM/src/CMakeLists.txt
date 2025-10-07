@@ -1,3 +1,5 @@
+
+# FJA: I am uncertain what this is.
 # Create static library for the linear solver
 add_library(modelEquation_lib STATIC
             FVMCalculateCoefficient.cpp

@@ -47,7 +47,7 @@ void fillBandInDenseMatrix(std::vector<std::vector<GLOBAL::scalar>>& A, const st
 //    ( 0 0 0 0 0 2 )    ( x_5 )       (2)
 //
 // solution: x = (0, 1, 0, 1, 0, 1)ˆT
-struct sparse_N6 : public ::testing::Test
+struct NK_sparse_N6 : public ::testing::Test
 {
     const int N = 6;
 
@@ -58,7 +58,7 @@ struct sparse_N6 : public ::testing::Test
     std::vector<GLOBAL::scalar> solution;
 
 
-    sparse_N6()
+    NK_sparse_N6()
     : A(N, std::vector<GLOBAL::scalar>(N)),
     b(N, 1.0),
     solution(N,0.0)
@@ -91,7 +91,7 @@ struct sparse_N6 : public ::testing::Test
 
 
 // solution: x = (1, 2, 3, 4, ... , N)ˆT
-struct sparse_N : public ::testing::Test
+struct NK_sparse_N : public ::testing::Test
 {
     //only for problems bigger then 7
     std::vector<std::vector<GLOBAL::scalar>> A;
@@ -135,7 +135,7 @@ struct sparse_N : public ::testing::Test
 
 
 // solution: x = (1, 2, 3, 4, ... , N)ˆT
-struct sparse_NCoefficient : public ::testing::Test
+struct NK_sparse_NCoefficient : public ::testing::Test
 {
     //only for problems bigger then 7
     GLOBAL::vector ap;
@@ -183,7 +183,7 @@ struct sparse_NCoefficient : public ::testing::Test
 //    ( ... 1 1 1 1 2 )    ( x_(N-1) )   ( N + Q )
 //
 // solution: x = (1, 2, 3, 4, ... , N)ˆT
-struct dense_N : public ::testing::Test {
+struct NK_dense_N : public ::testing::Test {
     std::vector<std::vector<GLOBAL::scalar>> A;
     std::vector<GLOBAL::scalar> b;
     std::vector<GLOBAL::scalar> solution;
@@ -202,7 +202,7 @@ struct dense_N : public ::testing::Test {
 };
 
 
-TEST_F(dense_N, denseSmallGaussSeidelMatrix)
+TEST_F(NK_dense_N, denseSmallGaussSeidelMatrix)
 {
     setProblemSize(60);
     Dense::GaussSeidel linEqs(A,b);
@@ -213,7 +213,7 @@ TEST_F(dense_N, denseSmallGaussSeidelMatrix)
     }
 }
 
-TEST_F(dense_N, denseSmallJacobiMatrix)
+TEST_F(NK_dense_N, denseSmallJacobiMatrix)
 {
     setProblemSize(60);
     Dense::JacobiIter linEqs(A,b);
@@ -225,7 +225,7 @@ TEST_F(dense_N, denseSmallJacobiMatrix)
 }
 
 
-TEST_F(sparse_N6, denseMidSizeJacobiMatrix)
+TEST_F(NK_sparse_N6, denseMidSizeJacobiMatrix)
 {
 
 
@@ -234,7 +234,7 @@ TEST_F(sparse_N6, denseMidSizeJacobiMatrix)
     EXPECT_EQ(x, solution);
 }
 
-TEST_F(sparse_N, denseMidSizeJacobiMatrix)
+TEST_F(NK_sparse_N, denseMidSizeJacobiMatrix)
 {
     setProblemSize(100);
     Dense::JacobiIter linEqs(A,b);
@@ -245,7 +245,7 @@ TEST_F(sparse_N, denseMidSizeJacobiMatrix)
     }
 }
 
-TEST_F(sparse_N, dense1MidSizeBiCGSTABMatrix)
+TEST_F(NK_sparse_N, dense1MidSizeBiCGSTABMatrix)
 {
     setProblemSize(100);
     Dense::BiCGSTAB linEqs(A,b);
@@ -257,7 +257,7 @@ TEST_F(sparse_N, dense1MidSizeBiCGSTABMatrix)
 }
 
 
-TEST_F(sparse_N, sparseMidSizeBiCGSTABMatrix)
+TEST_F(NK_sparse_N, sparseMidSizeBiCGSTABMatrix)
 {
     setProblemSize(100);
     Sparse::BiCGSTAB linEqs(A,b,4);
@@ -268,7 +268,7 @@ TEST_F(sparse_N, sparseMidSizeBiCGSTABMatrix)
     }
 }
 
-TEST_F(sparse_N, CheckSolverCanExecuteTwoTimes)
+TEST_F(NK_sparse_N, CheckSolverCanExecuteTwoTimes)
 {
 
     setProblemSize(100);
@@ -296,7 +296,7 @@ TEST_F(sparse_N, CheckSolverCanExecuteTwoTimes)
 }
 
 // why is this test called denseAll? What should this test demonstrate?
-TEST_F(sparse_N, denseAll)
+TEST_F(NK_sparse_N, denseAll)
 {
     setProblemSize(200);
     Dense::JacobiIter  linEqs_Jacobi          (A,b);
@@ -318,7 +318,7 @@ TEST_F(sparse_N, denseAll)
     timer("end");
 }
 
-TEST_F(sparse_NCoefficient, Using_Ap_Aw_An_As_Ae_as_input)
+TEST_F(NK_sparse_NCoefficient, Using_Ap_Aw_An_As_Ae_as_input)
 {
     auto N = 3;
     setProblemSize(N);
