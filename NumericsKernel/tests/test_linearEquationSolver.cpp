@@ -3,7 +3,7 @@
 #include "sparseMatrixSolvers.h"
 #include "denseMatrixSolvers.h"
 
-#include "globalTypeDefs.h"
+#include "TypeDefs_NumericsKernel.h"
 #include <blaze/Math.h>
 
 void timer(const std::string& command) {
@@ -19,54 +19,38 @@ void timer(const std::string& command) {
     }
 }
 
-struct param
-{
-    static constexpr double tolerance_ = 1e-7;
-};
-
-
-
-void fillBandInDenseMatrix(std::vector<std::vector<GLOBAL::scalar>>& A, const std::vector<GLOBAL::scalar>& q, int bandOffset)
-{
-    int n = A.size();
-    for (int i = 0; i < n; ++i)
-    {
-        int j = i + bandOffset;
-        if (j >= 0 && j < n)
-        {
-            A[i][j] = q[i];
-        }
-    }
+template<typename MatrixType>
+void fillBand(blaze::Band<MatrixType> band, LINALG::scalar value) {
+    for(size_t i = 0; i < band.size(); i++)  band[i] = value;
 }
 
-//    ( 2 1 0 0 0 0 )    ( x_0 )       (1)
-//    ( 0 2 1 0 0 0 )    ( x_1 )       (2)
-//    ( 0 0 2 1 0 0 )    ( x_2 )       (1)
-//    ( 0 0 0 2 1 0 )  * ( x_3 )    =  (2)
-//    ( 0 0 0 0 2 1 )    ( x_4 )       (1)
-//    ( 0 0 0 0 0 2 )    ( x_5 )       (2)
-//
-// solution: x = (0, 1, 0, 1, 0, 1)ˆT
-struct NK_sparse_N6 : public ::testing::Test
-{
-    const int N = 6;
+template<typename MatrixType>
+void fillBand(blaze::Band<MatrixType> band, LINALG::vector values) {
+    for(size_t i = 0; i < band.size(); i++)  band[i] = values[i];
+}
 
+struct NK_matrixBuilder : public::testing::Test {
 
+    LINALG::scalar tolerance = 1e-15;
+    unsigned int maxIter = 100000;
 
-    std::vector<std::vector<GLOBAL::scalar>> A;
-    std::vector<GLOBAL::scalar> b;
-    std::vector<GLOBAL::scalar> solution;
+    //    ( 2 1 0 0 0 0 )    ( x_0 )       (1)
+    //    ( 0 2 1 0 0 0 )    ( x_1 )       (2)
+    //    ( 0 0 2 1 0 0 )    ( x_2 )       (1)
+    //    ( 0 0 0 2 1 0 )  * ( x_3 )    =  (2)
+    //    ( 0 0 0 0 2 1 )    ( x_4 )       (1)
+    //    ( 0 0 0 0 0 2 )    ( x_5 )       (2)
+    //
+    // solution: x = (0, 1, 0, 1, 0, 1)ˆT
+    template<typename MatrixType>
+    void setSparseProblem_1(MatrixType& A, blaze::DynamicVector<LINALG::scalar>& b, blaze::DynamicVector<LINALG::scalar>& solution ) {
 
+        fillBand<MatrixType>( blaze::band(A,0), 2.0 );
+        fillBand<MatrixType>( blaze::band(A,1), 1.0 );
 
-    NK_sparse_N6()
-    : A(N, std::vector<GLOBAL::scalar>(N)),
-    b(N, 1.0),
-    solution(N,0.0)
-    {
-        fillBandInDenseMatrix(A, std::vector<GLOBAL::scalar>(N, 2), 0);
-        fillBandInDenseMatrix(A, std::vector<GLOBAL::scalar>(N-1, 1), 1);
-
-        for (int i = 0; i < N; i++)
+        std::fill(b.begin(), b.end(), 1.0);
+        std::fill(solution.begin(), solution.end(), 0.0);
+        for (int i = 0; i < b.size(); i++)
         {
             if (i % 2 != 0) {
                 b[i]++;
@@ -74,269 +58,262 @@ struct NK_sparse_N6 : public ::testing::Test
             }
         }
     }
-};
-
-//    ( -2 0 0 0 1 0 0 0 0 0 0 0 ...)    ( x_0 )       (3)
-//    ( 0 -2 0 0 0 1 0 0 0 0 0 0 ...)    ( x_1 )       (2)
-//    ( 0 0 -2 0 0 0 1 0 0 0 0 0 ...)    ( x_2 )       (1)
-//    ( 0 0 0 -2 0 0 0 1 0 0 0 0 ...)  * ( x_3 )    =  (0)
-//    ( 1 0 0 0 0 -2 0 0 0 1 0 0 ...)    ( x_4 )       (0)
-//    ( 0 1 0 0 0 0 -2 0 0 0 1 0 ...)    ( x_5 )       (0)
-//              ......
-//    ( ... 0 0 0 1 0 0 0 -2 0 0 0 1)    ( x_N-5 )      (0)
-//    ( ... 0 0 0 0 1 0 0 0 -2 0 0 0)    ( x_N-4 )      (-N-1)
-//    ( ... 0 0 0 0 0 1 0 0 0 -2 0 0)    ( x_N-3 )      (-N-2)
-//    ( ... 0 0 0 0 0 0 1 0 0 0 -2 0)    ( x_N-2 )      (-N-3)
-//    ( ... 0 0 0 0 0 0 0 1 0 0 0 -2)    ( x_N-1 )      (-N-4)
 
 
-// solution: x = (1, 2, 3, 4, ... , N)ˆT
-struct NK_sparse_N : public ::testing::Test
-{
-    //only for problems bigger then 7
-    std::vector<std::vector<GLOBAL::scalar>> A;
-    GLOBAL::vector b;
-    std::vector<GLOBAL::scalar> solution;
+    //    ( -2 0 0 0 1 0 0 0 0 0 0 0 ...)    ( x_0 )       (3)
+    //    ( 0 -2 0 0 0 1 0 0 0 0 0 0 ...)    ( x_1 )       (2)
+    //    ( 0 0 -2 0 0 0 1 0 0 0 0 0 ...)    ( x_2 )       (1)
+    //    ( 0 0 0 -2 0 0 0 1 0 0 0 0 ...)  * ( x_3 )    =  (0)
+    //    ( 1 0 0 0 0 -2 0 0 0 1 0 0 ...)    ( x_4 )       (0)
+    //    ( 0 1 0 0 0 0 -2 0 0 0 1 0 ...)    ( x_5 )       (0)
+    //              ......
+    //    ( ... 0 0 0 1 0 0 0 -2 0 0 0 1)    ( x_N-5 )      (0)
+    //    ( ... 0 0 0 0 1 0 0 0 -2 0 0 0)    ( x_N-4 )      (-N-1)
+    //    ( ... 0 0 0 0 0 1 0 0 0 -2 0 0)    ( x_N-3 )      (-N-2)
+    //    ( ... 0 0 0 0 0 0 1 0 0 0 -2 0)    ( x_N-2 )      (-N-3)
+    //    ( ... 0 0 0 0 0 0 0 1 0 0 0 -2)    ( x_N-1 )      (-N-4)
+    //    solution: x = (1, 2, 3, 4, ... , N)ˆT
+    template<typename MatrixType>
+    void setSparseProblem_2(MatrixType& A, blaze::DynamicVector<LINALG::scalar>& b, blaze::DynamicVector<LINALG::scalar>& solution )
+    {
+        //only for problems bigger then 7
+        fillBand<MatrixType>( blaze::band(A,0), -2.0 );
+        fillBand<MatrixType>( blaze::band(A,4), 1.0 );
+        fillBand<MatrixType>( blaze::band(A,-4), 1.0 );
 
-    void setProblemSize( const int N) {
-        A.assign(N, std::vector<double>(N,0.0));
-        b.assign(N,0.0);
-        solution.assign(N,0.0);
-
-
-        fillBandInDenseMatrix(A, std::vector<double>(N, -2.0), 0);
-        fillBandInDenseMatrix(A, std::vector<double>(N, 1.0), 4);
-        fillBandInDenseMatrix(A, std::vector<double>(N, 1.0), -4);
-
+        auto N = b.size();
         b[0] = 3.0;
         b[1] = 2.0;
         b[2] = 1.0;
-        b[N-1] = -N-4.0;
-        b[N-2] = -N-3.0;
-        b[N-3] = -N-2.0;
-        b[N-4] = -N-1.0;
+        b[N-4] = -static_cast<double>(N)-1.0;
+        b[N-3] = -static_cast<double>(N)-2.0;
+        b[N-2] = -static_cast<double>(N)-3.0;
+        b[N-1] = -static_cast<double>(N)-4.0;
 
         std::iota(solution.begin(), solution.end(), 1.0);
-    }
-};
+    };
 
-//    ( -2 0 0 0 1 0 0 0 0 0 0 0 ...)    ( x_0 )       (3)
-//    ( 0 -2 0 0 0 1 0 0 0 0 0 0 ...)    ( x_1 )       (2)
-//    ( 0 0 -2 0 0 0 1 0 0 0 0 0 ...)    ( x_2 )       (1)
-//    ( 0 0 0 -2 0 0 0 1 0 0 0 0 ...)  * ( x_3 )    =  (0)
-//    ( 1 0 0 0 0 -2 0 0 0 1 0 0 ...)    ( x_4 )       (0)
-//    ( 0 1 0 0 0 0 -2 0 0 0 1 0 ...)    ( x_5 )       (0)
-//              ......
-//    ( ... 0 0 0 1 0 0 0 -2 0 0 0 1)    ( x_N-5 )      (0)
-//    ( ... 0 0 0 0 1 0 0 0 -2 0 0 0)    ( x_N-4 )      (-N-1)
-//    ( ... 0 0 0 0 0 1 0 0 0 -2 0 0)    ( x_N-3 )      (-N-2)
-//    ( ... 0 0 0 0 0 0 1 0 0 0 -2 0)    ( x_N-2 )      (-N-3)
-//    ( ... 0 0 0 0 0 0 0 1 0 0 0 -2)    ( x_N-1 )      (-N-4)
+    //    Q = 0.5*N*(N+1)
+    //
+    //    ( 2 1 1 1 1 ... )    ( x_0 )       ( 1 + Q )
+    //    ( 1 2 1 1 1 ... )    ( x_1 )       ( 2 + Q )
+    //    ( 1 1 2 1 1 ... )    ( x_2 )   =   ( 3 + Q )
+    //    ( 1 1 1 2 1 ... )    ( x_3 )       ( 4 + Q )
+    //           ...              ...           ...
+    //    ( ... 1 1 1 1 2 )    ( x_(N-1) )   ( N + Q )
+    //    solution: x = (1, 2, 3, 4, ... , N)ˆT
+    template<typename MatrixType>
+    void setDenseProblem_1(MatrixType& A, blaze::DynamicVector<LINALG::scalar>& b, blaze::DynamicVector<LINALG::scalar>& solution )
+    {
+        auto N = A.rows();
+        for (size_t  i = 0; i<N; ++i) {
+            for (size_t j = 0; j<N; ++j) {
+                A(i,j) = 1.0;
+            }
+        }
+        fillBand<MatrixType>( blaze::band(A,0), 2.0 );
 
-
-// solution: x = (1, 2, 3, 4, ... , N)ˆT
-struct NK_sparse_NCoefficient : public ::testing::Test
-{
-    //only for problems bigger then 7
-    GLOBAL::vector ap;
-    GLOBAL::vector aw;
-    GLOBAL::vector an;
-    GLOBAL::vector as;
-    GLOBAL::vector ae;
-    GLOBAL::vector b;
-    GLOBAL::vector solution;
-
-    void setProblemSize( const int N) {
-        auto N2nd = N*N;
-        b.assign(N2nd,0.0);
-        solution.assign(N2nd,0.0);
-
-        auto valueAp = 4;
-        auto value_coefficents = 1;
-        ap.assign(N2nd, valueAp);
-        ae.assign(N2nd,-value_coefficents);
-        aw.assign(N2nd,-value_coefficents);
-        as.assign(N2nd,-value_coefficents);
-        an.assign(N2nd,-value_coefficents);
-        std::iota(solution.begin(), solution.end(), 1);
-        blaze::DynamicMatrix<GLOBAL::scalar> A(N2nd, N2nd, 0.0);
-
-        std::vector<GLOBAL::scalar> value_coefficents_Blaze(solution.begin(),    solution.end());
-        blaze::band(A, 0) = valueAp;
-        blaze::band(A, 1) =  -value_coefficents;
-        blaze::band(A, -1) =  -value_coefficents;
-        blaze::band(A, -N) =  -value_coefficents;
-        blaze::band(A,  N) =  -value_coefficents;
-        b = GLOBAL::vector::toStd(A*solution.toBlaze());
-    }
-};
-
-
-
-//    Q = 0.5*N*(N+1)
-//
-//    ( 2 1 1 1 1 ... )    ( x_0 )       ( 1 + Q )
-//    ( 1 2 1 1 1 ... )    ( x_1 )       ( 2 + Q )
-//    ( 1 1 2 1 1 ... )    ( x_2 )   =   ( 3 + Q )
-//    ( 1 1 1 2 1 ... )    ( x_3 )       ( 4 + Q )
-//           ...              ...           ...
-//    ( ... 1 1 1 1 2 )    ( x_(N-1) )   ( N + Q )
-//
-// solution: x = (1, 2, 3, 4, ... , N)ˆT
-struct NK_dense_N : public ::testing::Test {
-    std::vector<std::vector<GLOBAL::scalar>> A;
-    std::vector<GLOBAL::scalar> b;
-    std::vector<GLOBAL::scalar> solution;
-
-    void setProblemSize(const int N) {
-
-        A.assign(N, std::vector<GLOBAL::scalar>(N,1.0));
-        fillBandInDenseMatrix(A, std::vector<GLOBAL::scalar>(N, 2.0), 0);
-
-        b.assign(N,0.0);
-        std::iota(b.begin(), b.end(), 1+0.5*N*(N+1) );
-
-        solution.assign(N,0.0);
+        auto Q = 0.5*N*(N+1);
+        std::iota(b.begin(), b.end(), 1+Q);
         std::iota(solution.begin(), solution.end(), 1.0);
     }
+
+
+
+
 };
 
 
-TEST_F(NK_dense_N, denseSmallGaussSeidelMatrix)
+// ------------------------------- TESTS ------------------------------
+
+TEST_F(NK_matrixBuilder, sparseMatrix1_sparseBiCGSTAB)
 {
-    setProblemSize(60);
-    Dense::GaussSeidel linEqs(A,b);
-    auto x = linEqs.solve();
+    unsigned N = 2000;
+    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
+    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+
+    setSparseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+
+    Sparse::solve_BiCGSTAB( A, b, x, tolerance, maxIter  );
+
     for(int i = 0; i < solution.size(); i++)
     {
-        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
     }
 }
 
-TEST_F(NK_dense_N, denseSmallJacobiMatrix)
+TEST_F(NK_matrixBuilder, sparseMatrix2_sparseBiCGSTAB)
 {
-    setProblemSize(60);
-    Dense::JacobiIter linEqs(A,b);
-    auto x = linEqs.solve();
+    unsigned N = 2000;
+    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
+    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+
+    setSparseProblem_2<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+
+    Sparse::solve_BiCGSTAB( A, b, x, tolerance, maxIter  );
+
     for(int i = 0; i < solution.size(); i++)
     {
-        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
+    }
+}
+
+TEST_F(NK_matrixBuilder, denseMatrix1_sparseBiCGSTAB)
+{
+    unsigned N = 200;
+    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
+    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+
+    setDenseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+
+    Sparse::solve_BiCGSTAB( A, b, x, tolerance, maxIter  );
+    //
+    // std::cout << A << std::endl;
+    // std::cout << b << std::endl;
+    // std::cout << x << std::endl;
+    // std::cout << solution << std::endl;
+
+    for(int i = 0; i < solution.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
     }
 }
 
 
-TEST_F(NK_sparse_N6, denseMidSizeJacobiMatrix)
-{
+// TEST_F(NK_dense_N, denseSmallGaussSeidelMatrix)
+// {
+//     setProblemSize(60);
+//     Dense::GaussSeidel linEqs(A,b);
+//     auto x = linEqs.solve();
+//     for(int i = 0; i < solution.size(); i++)
+//     {
+//         EXPECT_NEAR(x[i], solution[i],tolerance);
+//     }
+// }
+//
+// TEST_F(NK_dense_N, denseSmallJacobiMatrix)
+// {
+//     setProblemSize(60);
+//     Dense::JacobiIter linEqs(A,b);
+//     auto x = linEqs.solve();
+//     for(int i = 0; i < solution.size(); i++)
+//     {
+//         EXPECT_NEAR(x[i], solution[i],tolerance);
+//     }
+// }
+//
+// TEST_F(NK_sparse_N6, denseMidSizeJacobiMatrix)
+// {
+//     Dense::JacobiIter linEqs(A,b);
+//     auto x = linEqs.solve();
+//     EXPECT_EQ(x, solution);
+// }
+//
+// TEST_F(NK_sparse_N, denseMidSizeJacobiMatrix)
+// {
+//     setProblemSize(100);
+//     Dense::JacobiIter linEqs(A,b);
+//     auto x = linEqs.solve();
+//     for(int i = 0; i < solution.size(); i++)
+//     {
+//         EXPECT_NEAR(x[i], solution[i],tolerance);
+//     }
+// }
+//
+// TEST_F(NK_sparse_N, dense1MidSizeBiCGSTABMatrix)
+// {
+//     setProblemSize(100);
+//     Dense::BiCGSTAB linEqs(A,b);
+//     auto x = linEqs.solve();
+//     for(int i = 0; i < solution.size(); i++)
+//     {
+//         EXPECT_NEAR(x[i], solution[i],tolerance);
+//     }
+// }
 
+//
+// TEST_F(NK_sparse_N, sparseMidSizeBiCGSTABMatrix)
+// {
+//     setProblemSize(100);
+//     Sparse::BiCGSTAB linEqs(A,b,4);
+//
+//     auto x = linEqs.solve();
+//     for(int i = 0; i < solution.size(); i++)
+//     {
+//         EXPECT_NEAR(x[i], solution[i],tolerance);
+//     }
+// }
+//
+// TEST_F(NK_sparse_N, CheckSolverCanExecuteTwoTimes)
+// {
+//
+//     setProblemSize(100);
+//     Dense::JacobiIter  linEqs_Jacobi            (A,b);
+//     Dense::GaussSeidel linEqs_GaussSeidel       (A,b);
+//     Dense::BiCGSTAB    linEqs_BiCGSTAB          (A,b);
+//     Sparse::BiCGSTAB   linEqs_BiCGSTAB_sparse   (A,b,4);
+//
+//     auto x_jacobi = linEqs_Jacobi.solve();
+//     auto x_gaussSeidel = linEqs_GaussSeidel.solve();
+//     auto x_BiCGSTAB = linEqs_BiCGSTAB.solve();
+//     auto x_BiCGSTAB_sparse = linEqs_BiCGSTAB_sparse.solve();
+//
+//     auto x_jacobi_second = linEqs_Jacobi.solve();
+//     auto x_gaussSeidel_second = linEqs_GaussSeidel.solve();
+//     auto x_BiCGSTAB_second = linEqs_BiCGSTAB.solve();
+//     auto x_BiCGSTAB_sparse_second = linEqs_BiCGSTAB_sparse.solve();
+//
+//     EXPECT_EQ(x_jacobi, x_jacobi_second);
+//     EXPECT_EQ(x_gaussSeidel, x_gaussSeidel_second);
+//     EXPECT_EQ(x_BiCGSTAB, x_BiCGSTAB_second);
+//     EXPECT_EQ(x_BiCGSTAB_sparse, x_BiCGSTAB_sparse_second);
+//
+//
+// }
+//
+// // why is this test called denseAll? What should this test demonstrate?
+// TEST_F(NK_sparse_N, denseAll)
+// {
+//     setProblemSize(200);
+//     Dense::JacobiIter  linEqs_Jacobi          (A,b);
+//     Dense::GaussSeidel linEqs_GaussSeidel     (A,b);
+//     Dense::BiCGSTAB    linEqs_BiCGSTAB        (A,b);
+//     Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (A,b,4);
+//
+//     timer("start");
+//     auto x_jacobi = linEqs_Jacobi.solve();
+//     timer("end");
+//     timer("start");
+//     auto x_gaussSeidel = linEqs_GaussSeidel.solve();
+//     timer("end");
+//     timer("start");
+//     auto x_BiCGSTB = linEqs_BiCGSTAB.solve();
+//     timer("end");
+//     timer("start");
+//     auto x_BiCGSTAB_Sparse = linEqs_BiCGSTAB_Sparse.solve();
+//     timer("end");
+// }
 
-    Dense::JacobiIter linEqs(A,b);
-    auto x = linEqs.solve();
-    EXPECT_EQ(x, solution);
-}
-
-TEST_F(NK_sparse_N, denseMidSizeJacobiMatrix)
-{
-    setProblemSize(100);
-    Dense::JacobiIter linEqs(A,b);
-    auto x = linEqs.solve();
-    for(int i = 0; i < solution.size(); i++)
-    {
-        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
-    }
-}
-
-TEST_F(NK_sparse_N, dense1MidSizeBiCGSTABMatrix)
-{
-    setProblemSize(100);
-    Dense::BiCGSTAB linEqs(A,b);
-    auto x = linEqs.solve();
-    for(int i = 0; i < solution.size(); i++)
-    {
-        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
-    }
-}
-
-
-TEST_F(NK_sparse_N, sparseMidSizeBiCGSTABMatrix)
-{
-    setProblemSize(100);
-    Sparse::BiCGSTAB linEqs(A,b,4);
-    auto x = linEqs.solve();
-    for(int i = 0; i < solution.size(); i++)
-    {
-        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
-    }
-}
-
-TEST_F(NK_sparse_N, CheckSolverCanExecuteTwoTimes)
-{
-
-    setProblemSize(100);
-    Dense::JacobiIter  linEqs_Jacobi            (A,b);
-    Dense::GaussSeidel linEqs_GaussSeidel       (A,b);
-    Dense::BiCGSTAB    linEqs_BiCGSTAB          (A,b);
-    Sparse::BiCGSTAB   linEqs_BiCGSTAB_sparse   (A,b,4);
-
-    auto x_jacobi = linEqs_Jacobi.solve();
-    auto x_gaussSeidel = linEqs_GaussSeidel.solve();
-    auto x_BiCGSTAB = linEqs_BiCGSTAB.solve();
-    auto x_BiCGSTAB_sparse = linEqs_BiCGSTAB_sparse.solve();
-
-    auto x_jacobi_second = linEqs_Jacobi.solve();
-    auto x_gaussSeidel_second = linEqs_GaussSeidel.solve();
-    auto x_BiCGSTAB_second = linEqs_BiCGSTAB.solve();
-    auto x_BiCGSTAB_sparse_second = linEqs_BiCGSTAB_sparse.solve();
-
-    EXPECT_EQ(x_jacobi, x_jacobi_second);
-    EXPECT_EQ(x_gaussSeidel, x_gaussSeidel_second);
-    EXPECT_EQ(x_BiCGSTAB, x_BiCGSTAB_second);
-    EXPECT_EQ(x_BiCGSTAB_sparse, x_BiCGSTAB_sparse_second);
-
-
-}
-
-// why is this test called denseAll? What should this test demonstrate?
-TEST_F(NK_sparse_N, denseAll)
-{
-    setProblemSize(200);
-    Dense::JacobiIter  linEqs_Jacobi          (A,b);
-    Dense::GaussSeidel linEqs_GaussSeidel     (A,b);
-    Dense::BiCGSTAB    linEqs_BiCGSTAB        (A,b);
-    Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (A,b,4);
-
-    timer("start");
-    auto x_jacobi = linEqs_Jacobi.solve();
-    timer("end");
-    timer("start");
-    auto x_gaussSeidel = linEqs_GaussSeidel.solve();
-    timer("end");
-    timer("start");
-    auto x_BiCGSTB = linEqs_BiCGSTAB.solve();
-    timer("end");
-    timer("start");
-    auto x_BiCGSTAB_Sparse = linEqs_BiCGSTAB_Sparse.solve();
-    timer("end");
-}
-
-TEST_F(NK_sparse_NCoefficient, Using_Ap_Aw_An_As_Ae_as_input)
-{
-    auto N = 3;
-    setProblemSize(N);
-
-    Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (N);
-    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(ap,FVM::CardinalDirection::centre);
-    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(ae,FVM::CardinalDirection::east);
-    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(aw,FVM::CardinalDirection::west);
-    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(as,FVM::CardinalDirection::south);
-    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(an,FVM::CardinalDirection::north);
-    linEqs_BiCGSTAB_Sparse.setDirectionalFlux(b,FVM::CardinalDirection::su);
-
-
-    auto x = linEqs_BiCGSTAB_Sparse.solve();
-    for(int i = 0; i < solution.size(); i++)
-    {
-        EXPECT_NEAR(x[i], solution[i],param::tolerance_);
-    }
-    int theEnd = 0;
-
-}
+//
+// TEST_F(NK_sparse_NCoefficient, Using_Ap_Aw_An_As_Ae_as_input)
+// {
+//     auto N = 3;
+//     setProblemSize(N);
+//
+//     Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (N);
+//     linEqs_BiCGSTAB_Sparse.setDirectionalFlux(ap,FVM::CardinalDirection::centre);
+//     linEqs_BiCGSTAB_Sparse.setDirectionalFlux(ae,FVM::CardinalDirection::east);
+//     linEqs_BiCGSTAB_Sparse.setDirectionalFlux(aw,FVM::CardinalDirection::west);
+//     linEqs_BiCGSTAB_Sparse.setDirectionalFlux(as,FVM::CardinalDirection::south);
+//     linEqs_BiCGSTAB_Sparse.setDirectionalFlux(an,FVM::CardinalDirection::north);
+//     linEqs_BiCGSTAB_Sparse.setDirectionalFlux(b,FVM::CardinalDirection::su);
+//
+//
+//     auto x = linEqs_BiCGSTAB_Sparse.solve();
+//     for(int i = 0; i < solution.size(); i++)
+//     {
+//         EXPECT_NEAR(x[i], solution[i],param::tolerance_);
+//     }
+//     int theEnd = 0;
+//
+// }

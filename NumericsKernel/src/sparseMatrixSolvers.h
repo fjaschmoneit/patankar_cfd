@@ -1,59 +1,72 @@
 #include <vector>
 #include <blaze/Math.h>
-#include "globalTypeDefs.h"
+#include "TypeDefs_NumericsKernel.h"
+
 namespace Sparse{
 
-    // interface
-    class ISparseLinearSolver {
+    class matrix{
 
-    protected:
+    public:
 
-        blaze::CompressedMatrix<GLOBAL::scalar> A_;
-//        blaze::DynamicVector<GLOBAL::scalar> b_;
-        blaze::DynamicVector<GLOBAL::scalar> x0_;
-        GLOBAL::scalar tolerance_ = 1e-15;
-        GLOBAL::scalar maxIter_ = 10000000;
-        std::vector<int> bands_;
-
+        blaze::CompressedMatrix<LINALG::scalar> data_;
+        // blaze::DynamicVector<LINALG::scalar> b_;
+        // blaze::DynamicVector<LINALG::scalar> x0_;
         blaze::Band<LINALG::matrix> ap_;
         blaze::Band<LINALG::matrix> ae_;
         blaze::Band<LINALG::matrix> aw_;
         blaze::Band<LINALG::matrix> an_;
         blaze::Band<LINALG::matrix> as_;
-        //LINALG::vector b_;
-        GLOBAL::vector b_;
-        int meshSize_;
+
+        // LINALG::scalar tolerance_ = 1e-15;
+        // LINALG::scalar maxIter_ = 10000000;
+        std::vector<int> bands_;
+
+        // LINALG::vector b_;
+        // int meshSize_; // why?
+
+        // ISparseLinearSolver(const std::vector<std::vector<LINALG::scalar>> &A, const LINALG::vector &b,int meshSize);
+
+        matrix(unsigned int nx, unsigned int ny);
+
+        // ISparseLinearSolver(int meshSize);
 
 
-    public:
-        ISparseLinearSolver(const std::vector<std::vector<GLOBAL::scalar>> &A, const GLOBAL::vector &b,int meshSize);
+        // virtual ~ISparseLinearSolver() = default;
+        // virtual std::vector<LINALG::scalar> solve() = 0;
 
-        explicit ISparseLinearSolver(int meshSize);
-
-        virtual ~ISparseLinearSolver() = default;
-
-        virtual std::vector<GLOBAL::scalar> solve() = 0;
-
-        void setDirectionalFlux( const GLOBAL::vector& ai,const FVM::CardinalDirection dir );
+        // dir = 0:centre; 1:east; 2:north, 3:west, 4:south
+        void setDirectionalFlux( const std::vector<LINALG::scalar>& ai,const unsigned int dir );
     };
 
-    class GaussSeidel : public ISparseLinearSolver {
 
-    public:
-        // using base class constructor:
-        using ISparseLinearSolver::ISparseLinearSolver;
 
-        std::vector<GLOBAL::scalar> solve() override;
-    };
 
-    class BiCGSTAB : public ISparseLinearSolver {
 
-    public:
-        // using base class constructor:
-        using ISparseLinearSolver::ISparseLinearSolver;
+    void solve_BiCGSTAB(
+        LINALG::matrix&  A,
+        LINALG::vector& b,
+        LINALG::vector& x,      // initial guess comes in here, result is replacing that guess
+        LINALG::scalar tolerance,
+        unsigned int maxIter );
 
-        std::vector<GLOBAL::scalar> solve() override;
-    };
+    //
+    // class GaussSeidel : public ISparseLinearSolver {
+    //
+    // public:
+    //     // using base class constructor:
+    //     using ISparseLinearSolver::ISparseLinearSolver;
+    //
+    //     std::vector<LINALG::scalar> solve() override;
+    // };
+    //
+    // class BiCGSTAB : public ISparseLinearSolver {
+    //
+    // public:
+    //     // using base class constructor:
+    //     using ISparseLinearSolver::ISparseLinearSolver;
+    //
+    //     std::vector<LINALG::scalar> solve() override;
+    // };
 
 
 }

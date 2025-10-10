@@ -6,24 +6,24 @@
 #include <functional>
 #include <algorithm>
 #include <fstream>
+//
+// GLOBAL::vector FVMCalculateCoefficient::getAi(FVM::CardinalDirection dir) const
+// {
+//     switch (dir) {
+//         case FVM::CardinalDirection::centre: return fvmCoeffs.aP_;
+//         case FVM::CardinalDirection::east:   return fvmCoeffs.aE_;
+//         case FVM::CardinalDirection::south:  return fvmCoeffs.aS_;
+//         case FVM::CardinalDirection::west:   return fvmCoeffs.aW_;
+//         case FVM::CardinalDirection::north:  return fvmCoeffs.aN_;
+//         default: throw std::invalid_argument("Unknown direction");
+//     }
+// }
+// GLOBAL::vector FVMCalculateCoefficient::getB() const
+// {
+//     return fvmCoeffs.Su_;
+// }
 
-GLOBAL::vector FVMCalculateCoefficient::getAi(FVM::CardinalDirection dir) const
-{
-    switch (dir) {
-        case FVM::CardinalDirection::centre: return fvmCoeffs.aP_;
-        case FVM::CardinalDirection::east:   return fvmCoeffs.aE_;
-        case FVM::CardinalDirection::south:  return fvmCoeffs.aS_;
-        case FVM::CardinalDirection::west:   return fvmCoeffs.aW_;
-        case FVM::CardinalDirection::north:  return fvmCoeffs.aN_;
-        default: throw std::invalid_argument("Unknown direction");
-    }
-}
-GLOBAL::vector FVMCalculateCoefficient::getB() const
-{
-    return fvmCoeffs.Su_;
-}
-
-void FVMCalculateCoefficient::addCoefficientsToWestEastNortOrSouth(const FVM::CardinalDirection& dir, GLOBAL::scalar& value)
+void FVMCalculateCoefficient::addCoefficientsToWestEastNortOrSouth(const FVM::CardinalDirection& dir, FVM::scalar& value)
 {
     switch (dir)
     {

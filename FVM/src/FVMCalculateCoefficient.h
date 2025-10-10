@@ -4,7 +4,7 @@
 
 #ifndef FVMCalculatedCoefficient_H
 #define FVMCalculatedCoefficient_H
-#include <globalTypeDefs.h>
+#include <TypeDefs_FVM.h>
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -16,18 +16,18 @@ struct FvmCoeffs
     // Geometri
     unsigned int Nx_, Ny_;
     unsigned int numberOfCells_;
-    GLOBAL::scalar dx_, dy_;
-    GLOBAL::scalar L_;
+    FVM::scalar dx_, dy_;
+    FVM::scalar L_;
 
     // Coefficients (per cell)
-    GLOBAL::vector aP_, aW_, aE_, aS_, aN_, Su_, Sp_;
+    std::vector<FVM::scalar> aP_, aW_, aE_, aS_, aN_, Su_, Sp_;
 
     // Diffusion conductances (D) and distances (d) per direction
     //GLOBAL::scalar Dw_, De_, Ds_, Dn_;
-    GLOBAL::scalar dW_, dE_, dS_, dN_;
+    FVM::scalar dW_, dE_, dS_, dN_;
 
-    GLOBAL::scalar k_;
-    GLOBAL::scalar A_;
+    FVM::scalar k_;
+    FVM::scalar A_;
    
 };
 
@@ -35,7 +35,7 @@ class FVMCalculateCoefficient
 {
 public:
     FvmCoeffs fvmCoeffs{};
-    FVMCalculateCoefficient(unsigned int Nx,unsigned int Ny,unsigned int numberOfCells,GLOBAL::scalar Length)
+    FVMCalculateCoefficient(unsigned int Nx,unsigned int Ny,unsigned int numberOfCells,FVM::scalar Length)
     {
         fvmCoeffs.Nx_ = Nx;
         fvmCoeffs.Ny_ = Ny;
@@ -76,23 +76,23 @@ public:
             addCoefficientsToWestEastNortOrSouth(dir, value);
         }
     }
-
-    [[nodiscard]] GLOBAL::vector getAi(FVM::CardinalDirection dir) const;
-    [[nodiscard]] GLOBAL::vector getB() const;
-    
-    [[nodiscard]] std::vector<unsigned int> getFaceNumberSouth() const
+    //
+    // std::vector getAi(FVM::CardinalDirection dir) const;
+    // std::vector getB() const;
+    //
+    std::vector<unsigned int> getFaceNumberSouth() const
     {
         std::vector<unsigned int> values(fvmCoeffs.Ny_);
         std::iota(values.begin(), values.end(), static_cast<int>(2 * fvmCoeffs.Nx_));
         return values;
     }
-    [[nodiscard]] std::vector<unsigned int> getFaceNumberNorth() const
+    std::vector<unsigned int> getFaceNumberNorth() const
     {
         std::vector<unsigned int> values(fvmCoeffs.Ny_);
         std::iota(values.begin(), values.end(), static_cast<int>(0));
         return values;
     }
-    [[nodiscard]] std::vector<unsigned int> getFaceNumberWest() const
+    std::vector<unsigned int> getFaceNumberWest() const
     {
         std::vector<unsigned int> values(fvmCoeffs.Ny_);
         std::iota(values.begin(), values.end(), static_cast<int>(0));
@@ -103,7 +103,7 @@ public:
         return values;
     }
 
-    [[nodiscard]] std::vector<unsigned int> getFaceNumberEast() const
+    std::vector<unsigned int> getFaceNumberEast() const
     {
         std::vector<unsigned int> values(fvmCoeffs.Ny_);
         std::iota(values.begin(), values.end(), static_cast<int>(0));
@@ -113,30 +113,30 @@ public:
         }
         return values;
     }
-
-    void apply_Boundary(const FVM::CardinalDirection& dir,const GLOBAL::vector& value)
-    {
-        std::vector<unsigned int> Faces;
-        GLOBAL::vector* ai = &fvmCoeffs.aE_;
-        switch (dir)
-        {
-            case FVM::CardinalDirection::east:  Faces = getFaceNumberEast(); ai = &fvmCoeffs.aE_; break;
-            case FVM::CardinalDirection::south: Faces = getFaceNumberSouth();ai = &fvmCoeffs.aS_; break;
-            case FVM::CardinalDirection::north: Faces = getFaceNumberNorth();ai = &fvmCoeffs.aN_; break;
-            case FVM::CardinalDirection::west:  Faces = getFaceNumberWest(); ai = &fvmCoeffs.aW_; break;
-            default: throw std::invalid_argument("Unknown direction");
-        }
-
-        unsigned int i = 0;
-        //apply Direchtly bounadry condition.
-        for (const unsigned int face : Faces)
-        {
-            fvmCoeffs.Sp_[face] += -2 * (*ai)[face];
-            fvmCoeffs.Su_[face] +=  2 * (*ai)[face]*value[i];
-            (*ai)[face] = 0;
-            i++;
-        }
-    }
+    //
+    // void apply_Boundary(const FVM::CardinalDirection& dir,const std::vector& value)
+    // {
+    //     std::vector<unsigned int> Faces;
+    //     std::vector* ai = &fvmCoeffs.aE_;
+    //     switch (dir)
+    //     {
+    //         case FVM::CardinalDirection::east:  Faces = getFaceNumberEast(); ai = &fvmCoeffs.aE_; break;
+    //         case FVM::CardinalDirection::south: Faces = getFaceNumberSouth();ai = &fvmCoeffs.aS_; break;
+    //         case FVM::CardinalDirection::north: Faces = getFaceNumberNorth();ai = &fvmCoeffs.aN_; break;
+    //         case FVM::CardinalDirection::west:  Faces = getFaceNumberWest(); ai = &fvmCoeffs.aW_; break;
+    //         default: throw std::invalid_argument("Unknown direction");
+    //     }
+    //
+    //     unsigned int i = 0;
+    //     //apply Direchtly bounadry condition.
+    //     for (const unsigned int face : Faces)
+    //     {
+    //         fvmCoeffs.Sp_[face] += -2 * (*ai)[face];
+    //         fvmCoeffs.Su_[face] +=  2 * (*ai)[face]*value[i];
+    //         (*ai)[face] = 0;
+    //         i++;
+    //     }
+    // }
 
     void CollectAp()
     {
@@ -156,7 +156,7 @@ public:
 
 private:
 
-    void addCoefficientsToWestEastNortOrSouth(const FVM::CardinalDirection& dir, GLOBAL::scalar& ai);
+    void addCoefficientsToWestEastNortOrSouth(const FVM::CardinalDirection& dir, FVM::scalar& ai);
 };
 
 

@@ -1,7 +1,7 @@
 
 #include <vector>
 #include <blaze/Math.h>
-#include "globalTypeDefs.h"
+#include "TypeDefs_NumericsKernel.h"
 
 
 namespace Dense {
@@ -10,22 +10,22 @@ namespace Dense {
     class IDenseLinearSolver {
     protected:
 
-        blaze::DynamicMatrix<GLOBAL::scalar> A_;
-        blaze::DynamicVector<GLOBAL::scalar> b_;
-        blaze::DynamicVector<GLOBAL::scalar> x0_;
-        GLOBAL::scalar tolerance_ = 1e-14;
-        GLOBAL::scalar maxIter_ = 100000;
+        blaze::DynamicMatrix<LINALG::scalar> A_;
+        blaze::DynamicVector<LINALG::scalar> b_;
+        blaze::DynamicVector<LINALG::scalar> x0_;
+        LINALG::scalar tolerance_ = 1e-14;
+        LINALG::scalar maxIter_ = 100000;
 
 
     public:
-        void setX0(std::vector<GLOBAL::scalar> x0);
+        void setX0(std::vector<LINALG::scalar> x0);
 
-        IDenseLinearSolver(const std::vector<std::vector<GLOBAL::scalar>> &A, const std::vector<GLOBAL::scalar> &b);
+        IDenseLinearSolver(const std::vector<std::vector<LINALG::scalar>> &A, const std::vector<LINALG::scalar> &b);
         //      : x0_(b_.size());
 
         virtual ~IDenseLinearSolver() = default;
 
-        virtual std::vector<GLOBAL::scalar> solve() = 0;
+        virtual std::vector<LINALG::scalar> solve() = 0;
     };
 
     class GaussSeidel : public IDenseLinearSolver
@@ -33,14 +33,14 @@ namespace Dense {
         public:
         using IDenseLinearSolver::IDenseLinearSolver;
 
-        std::vector<GLOBAL::scalar>  solve() override ;
+        std::vector<LINALG::scalar>  solve() override ;
     };
     class JacobiIter : public IDenseLinearSolver
     {
     public:
         using IDenseLinearSolver::IDenseLinearSolver;
 
-        std::vector<GLOBAL::scalar> solve() override ;
+        std::vector<LINALG::scalar> solve() override ;
     };
 
     class BiCGSTAB : public IDenseLinearSolver
@@ -48,7 +48,7 @@ namespace Dense {
     public:
         using IDenseLinearSolver::IDenseLinearSolver;
 
-        std::vector<GLOBAL::scalar>  solve() override ;
+        std::vector<LINALG::scalar>  solve() override ;
     };
 
 }
