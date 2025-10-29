@@ -3,6 +3,7 @@
 #include "TypeDefs_NumericsKernel.h"
 #include <iostream>
 #include "MathUtils.h"
+#include <cmath>
 
 
 
@@ -31,7 +32,6 @@ template<typename MatrixType>
 void fillBand(blaze::Band<MatrixType> band, LINALG::vector values) {
     for(size_t i = 0; i < band.size(); i++)  band[i] = values[i];
 }
-
 
 //
 // template<typename MatrixType>
@@ -144,6 +144,50 @@ void solve_GaussSeidel(MatrixType &A, LINALG::vector &b, LINALG::vector &x, LINA
         x_old = x;
     }
 }
+
+template<typename MatrixType>
+void solve_JacobiIter(MatrixType &A, LINALG::vector &b, LINALG::vector &x, LINALG::scalar tolerance, unsigned int maxIter)
+{
+
+     auto rows = A.rows();
+     //blaze::DynamicVector<LINALG::scalar> x_old ;
+     // we need to make a xold as input.
+     blaze::DynamicVector<double> x_old( rows, 0.0 );
+     blaze::DynamicMatrix<LINALG::scalar> B = A;     // deep copy
+
+
+
+    //deep copy and diagonal vector as it not working for dense matrix
+     blaze::DynamicVector<LINALG::scalar> dvec( A.rows() );
+     dvec = blaze::diagonal( A );
+     auto invD = LINALG::scalar(1.0) / dvec;
+
+     //for dense Matrix, used the this
+     //auto d = blaze::diagonal(A);  // view af diagonalen
+     //auto invD = 1.0/d;
+
+     blaze::DiagonalMatrix< blaze::CompressedMatrix<LINALG::scalar> > invDSparse( A.rows() );
+     blaze::diagonal( invDSparse ) = invD;
+     blaze::diagonal(B) = 0.0;
+    int k;
+     for (k = 0; k < maxIter; ++k)
+     {
+         auto rhs = b - B * x_old;
+         x = invDSparse * rhs;
+         if ( MathUtils::diffNorm2(x,x_old) < tolerance)
+         {
+             std::cout<<"Jacobi solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
+             break;
+         }
+         x_old = x;
+     }
+     if ( k >= maxIter)
+     {
+         std::cerr<<"Jacobi solver did not converge within"<<  std::to_string(maxIter)<<" iterations."<<std::endl;
+     }
+ }
+
+
 
 
 

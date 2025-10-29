@@ -48,6 +48,50 @@ TEST_F(NK_matrixBuilder, denseMatrix1_BiCGSTAB)
         EXPECT_NEAR(x[i], solution[i], 1e-8);
 }
 
+TEST_F(NK_matrixBuilder, sparseMatrix1_Jacobi)
+{
+    unsigned N = 200;
+    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
+    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+
+    setSparseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+
+    solve_JacobiIter( A, b, x, tolerance, maxIter  );
+
+    for(int i = 0; i < solution.size(); i++)
+    {
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
+    }
+}
+
+TEST_F(NK_matrixBuilder, sparseMatrix2_Jacobi)
+{
+    unsigned N = 200;
+    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
+    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+
+    setSparseProblem_2<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+
+    solve_JacobiIter( A, b, x, tolerance, maxIter  );
+
+    for(int i = 0; i < solution.size(); i++)
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
+}
+
+TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
+{
+    unsigned N = 200;
+    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
+    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+
+    setDenseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+
+    solve_JacobiIter( A, b, x, tolerance, maxIter  );
+
+    for(int i = 0; i < solution.size(); i++)
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
+}
+
 TEST_F(NK_matrixBuilder, sparseMatrix1_GaussSeidel)
 {
     unsigned N = 200;
