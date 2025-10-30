@@ -53,24 +53,56 @@ TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
 
 
 // // why is this test called denseAll? What should this test demonstrate?
-// TEST_F(NK_sparse_N, denseAll)
-// {
-//     setProblemSize(200);
-//     Dense::JacobiIter  linEqs_Jacobi          (A,b);
-//     Dense::GaussSeidel linEqs_GaussSeidel     (A,b);
-//     Dense::BiCGSTAB    linEqs_BiCGSTAB        (A,b);
-//     Sparse::BiCGSTAB   linEqs_BiCGSTAB_Sparse (A,b,4);
+ TEST_F(NK_matrixBuilder, Sparse_run_all_tests)
+ {
+    auto timer1 = timer();
+    auto timer2 = timer();
+    auto timer3 = timer();
+
+    using SparseMatrix = blaze::CompressedMatrix<LINALG::scalar>;
+    int size = 1000;
+    auto N = size;
+    SparseMatrix A(N,N, 5*N);
+    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    setSparseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+
+    timer1.start();
+    solve_GaussSeidel<SparseMatrix>( A, b, x, tolerance, maxIter);
+    auto T1 = timer1.stop();
+    timer2.start();
+    solve_JacobiIter<SparseMatrix>( A, b, x, tolerance, maxIter);
+    auto T2 = timer2.stop();
+    timer3.start();
+    solve_BiCGSTAB<SparseMatrix>( A, b, x, tolerance, maxIter);
+    auto T3 = timer3.stop();
+
+    std::cout << N << ", \t" << T1 << " ms, \t" << T2 << " ms, \t" << T3 << " ms " << std::endl;
+ }
+
+//TEST_F(NK_matrixBuilder, Dense_run_all_tests)
+//{
+//    auto timer1 = timer();
+//    auto timer2 = timer();
+//    auto timer3 = timer();
 //
-//     timer("start");
-//     auto x_jacobi = linEqs_Jacobi.solve();
-//     timer("end");
-//     timer("start");
-//     auto x_gaussSeidel = linEqs_GaussSeidel.solve();
-//     timer("end");
-//     timer("start");
-//     auto x_BiCGSTB = linEqs_BiCGSTAB.solve();
-//     timer("end");
-//     timer("start");
-//     auto x_BiCGSTAB_Sparse = linEqs_BiCGSTAB_Sparse.solve();
-//     timer("end");
-// }
+//    using DenseMatrix = blaze::DynamicMatrix<LINALG::scalar>;
+//    int size = 1000;
+//    auto N = size;
+//    DenseMatrix A(N,N, 5*N);
+//    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+//    setSparseProblem_1<blaze::DynamicMatrix<LINALG::scalar>>(A, b, solution);
+//
+//    timer1.start();
+//    //solve_GaussSeidel<DenseMatrix>( A, b, x, tolerance, maxIter);
+//    auto T1 = timer1.stop();
+//    timer2.start();
+//    solve_BiCGSTAB( A, b, x, tolerance, maxIter);
+//    auto T2 = timer2.stop();
+//    timer3.start();
+//    solve_BiCGSTAB<DenseMatrix>( A, b, x, tolerance, maxIter);
+//    auto T3 = timer3.stop();
+//
+//    std::cout << N << ", \t" << T1 << " ms, \t" << T2 << " ms, \t" << T3 << " ms " << std::endl;
+//
+//
+//}
