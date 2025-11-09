@@ -1,20 +1,20 @@
 #include "LinEqsSolvers.h"
+//
+// template<typename MatrixType>
+// matrix<MatrixType>::matrix(const unsigned int nx, const unsigned int ny):
+//     data_(nx*ny, nx*ny),
+//     bands_(std::vector<int>{ static_cast<int>(-nx), -1, 0, 1, static_cast<int>(nx)} ),
+//     ap_(blaze::band(data_,0)),
+//     an_(blaze::band(data_,static_cast<int>(-nx))),
+//     ae_(blaze::band(data_,1)),
+//     as_(blaze::band(data_,static_cast<int>(nx))),
+//     aw_(blaze::band(data_,-1))
+// {
+// }
 
-template<typename MatrixType>
-matrix<MatrixType>::matrix(const unsigned int nx, const unsigned int ny):
-    data_(nx*ny, nx*ny),
-    bands_(std::vector<int>{ static_cast<int>(-nx), -1, 0, 1, static_cast<int>(nx)} ),
-    ap_(blaze::band(data_,0)),
-    an_(blaze::band(data_,static_cast<int>(-nx))),
-    ae_(blaze::band(data_,1)),
-    as_(blaze::band(data_,static_cast<int>(nx))),
-    aw_(blaze::band(data_,-1))
-{
-}
 
 
-
-// void Dense::IDenseLinearSolver::setX0(std::vector<LINALG::scalar> x0)
+// void Dense::IDenseLinearSolver::setX0(std::vector<KERNEL::scalar> x0)
 // {
 //      blaze::reset(x0_);
 //
@@ -22,17 +22,17 @@ matrix<MatrixType>::matrix(const unsigned int nx, const unsigned int ny):
 // }
 
 
-// std::vector<LINALG::scalar> Dense::JacobiIter::solve() {
+// std::vector<KERNEL::scalar> Dense::JacobiIter::solve() {
 //
 //     auto rows = A_.rows();
-//     blaze::DynamicVector<LINALG::scalar> x(rows, 0.0 );
-//     blaze::DynamicVector<LINALG::scalar> x_old = x0_;
-//     blaze::DynamicMatrix<LINALG::scalar> B = A_;     // deep copy
+//     KERNEL::vector x(rows, 0.0 );
+//     KERNEL::vector x_old = x0_;
+//     blaze::DynamicMatrix<KERNEL::scalar> B = A_;     // deep copy
 //
 //     auto d = blaze::diagonal(A_);  // view af diagonalen
 //     auto invD = 1.0/d;
 //
-//     blaze::DiagonalMatrix< blaze::CompressedMatrix<LINALG::scalar> > invDSparse( A_.rows() );
+//     blaze::DiagonalMatrix< KERNEL::smatrix > invDSparse( A_.rows() );
 //     blaze::diagonal( invDSparse ) = invD;
 //     blaze::diagonal(B) = 0.0;
 //
@@ -52,31 +52,31 @@ matrix<MatrixType>::matrix(const unsigned int nx, const unsigned int ny):
 // }
 
 
-// std::vector<LINALG::scalar> Dense::BiCGSTAB::solve()
+// std::vector<KERNEL::scalar> Dense::BiCGSTAB::solve()
 // {
 //
 //     using blaze::dot;
 //     using blaze::norm;
 //
 //     const std::size_t n = A_.rows();
-//     blaze::DynamicVector<LINALG::scalar> x = x0_;
-//     blaze::DynamicVector<LINALG::scalar> r0 = b_ - A_ * x;
-//     blaze::DynamicVector<LINALG::scalar> r  = r0;
-//     blaze::DynamicVector<LINALG::scalar> p  = r;
-//     blaze::DynamicVector<LINALG::scalar> v(n, 0.0), s(n, 0.0), t(n, 0.0);
+//     KERNEL::vector x = x0_;
+//     KERNEL::vector r0 = b_ - A_ * x;
+//     KERNEL::vector r  = r0;
+//     KERNEL::vector p  = r;
+//     KERNEL::vector v(n, 0.0), s(n, 0.0), t(n, 0.0);
 //
-//     LINALG::scalar rho  = dot(r0, r0);
-//     LINALG::scalar alpha = 0.0, omega = 0.0, rho1 = 0.0, beta = 0.0;
+//     KERNEL::scalar rho  = dot(r0, r0);
+//     KERNEL::scalar alpha = 0.0, omega = 0.0, rho1 = 0.0, beta = 0.0;
 //
-//     const LINALG::scalar normb = std::max(norm(b_), 1e-30);
-//     LINALG::scalar normres = norm(r0);
-//     LINALG::scalar relres  = normres / normb;
+//     const KERNEL::scalar normb = std::max(norm(b_), 1e-30);
+//     KERNEL::scalar normres = norm(r0);
+//     KERNEL::scalar relres  = normres / normb;
 //
 //     std::size_t it = 0;
 //     while (relres > tolerance_ && it < maxIter_)
 //     {
 //         v    = A_ * p;
-//         LINALG::scalar vr0 = dot(v, r0);
+//         KERNEL::scalar vr0 = dot(v, r0);
 //         if (std::fabs(vr0) < 1e-30) break;
 //
 //         alpha = rho / vr0;
@@ -84,7 +84,7 @@ matrix<MatrixType>::matrix(const unsigned int nx, const unsigned int ny):
 //         s = r - alpha * v;
 //         t = A_ * s;
 //
-//         LINALG::scalar tt = dot(t, t);
+//         KERNEL::scalar tt = dot(t, t);
 //         if (tt <= 0.0) break;
 //
 //         omega = dot(t, s) / tt;

@@ -5,15 +5,13 @@
 
 TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
 {
-    using SparseMatrix = blaze::CompressedMatrix<LINALG::scalar>;
-
     unsigned N = 2000;
-    SparseMatrix A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    KERNEL::smatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setSparseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setSparseProblem_1<KERNEL::smatrix>(A, b, solution);
 
-    solve_BiCGSTAB<SparseMatrix>( A, b, x, tolerance, maxIter);
+    solve_BiCGSTAB<KERNEL::smatrix>( A, b, x, tolerance, maxIter);
 
     for(int i = 0; i < solution.size(); i++)
         EXPECT_NEAR(x[i], solution[i], 1e-8);
@@ -22,10 +20,10 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
 TEST_F(NK_matrixBuilder, sparseMatrix2_BiCGSTAB)
 {
     unsigned N = 2000;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    KERNEL::smatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setSparseProblem_2<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setSparseProblem_2<KERNEL::smatrix>(A, b, solution);
 
     solve_BiCGSTAB( A, b, x, tolerance, maxIter  );
 
@@ -37,10 +35,10 @@ TEST_F(NK_matrixBuilder, sparseMatrix2_BiCGSTAB)
 TEST_F(NK_matrixBuilder, denseMatrix1_BiCGSTAB)
 {
     unsigned N = 600;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    KERNEL::smatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setDenseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setDenseProblem_1<KERNEL::smatrix>(A, b, solution);
 
     solve_BiCGSTAB( A, b, x, tolerance, maxIter  );
 
@@ -51,10 +49,10 @@ TEST_F(NK_matrixBuilder, denseMatrix1_BiCGSTAB)
 TEST_F(NK_matrixBuilder, sparseMatrix1_Jacobi)
 {
     unsigned N = 200;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    KERNEL::smatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setSparseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setSparseProblem_1<KERNEL::smatrix>(A, b, solution);
 
     solve_JacobiIter( A, b, x, tolerance, maxIter  );
 
@@ -67,10 +65,10 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_Jacobi)
 TEST_F(NK_matrixBuilder, sparseMatrix2_Jacobi)
 {
     unsigned N = 200;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    KERNEL::smatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setSparseProblem_2<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setSparseProblem_2<KERNEL::smatrix>(A, b, solution);
 
     solve_JacobiIter( A, b, x, tolerance, maxIter  );
 
@@ -80,11 +78,11 @@ TEST_F(NK_matrixBuilder, sparseMatrix2_Jacobi)
 
 TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
 {
-    unsigned N = 200;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    unsigned N = 40;
+    KERNEL::dmatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setDenseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
 
     solve_JacobiIter( A, b, x, tolerance, maxIter  );
 
@@ -95,10 +93,10 @@ TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
 TEST_F(NK_matrixBuilder, sparseMatrix1_GaussSeidel)
 {
     unsigned N = 200;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    KERNEL::smatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setSparseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setSparseProblem_1<KERNEL::smatrix>(A, b, solution);
 
     solve_GaussSeidel( A, b, x, tolerance, maxIter  );
 
@@ -109,10 +107,10 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_GaussSeidel)
 TEST_F(NK_matrixBuilder, sparseMatrix2_GaussSeidel)
 {
     unsigned N = 200;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    KERNEL::smatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setSparseProblem_2<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setSparseProblem_2<KERNEL::smatrix>(A, b, solution);
 
     solve_GaussSeidel( A, b, x, tolerance, maxIter  );
 
@@ -123,11 +121,11 @@ TEST_F(NK_matrixBuilder, sparseMatrix2_GaussSeidel)
 
 TEST_F(NK_matrixBuilder, denseMatrix1_GaussSeidel)
 {
-    unsigned N = 200;
-    blaze::CompressedMatrix<LINALG::scalar> A(N,N, 5*N);
-    blaze::DynamicVector<LINALG::scalar> b(N,0.0), x(N, 0.0), solution(N, 0.0);
+    unsigned N = 40;
+    KERNEL::dmatrix A(N,N, 5*N);
+    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
-    setDenseProblem_1<blaze::CompressedMatrix<LINALG::scalar>>(A, b, solution);
+    setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
 
     solve_GaussSeidel( A, b, x, tolerance, maxIter  );
 

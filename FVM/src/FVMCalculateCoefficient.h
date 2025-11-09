@@ -28,7 +28,7 @@ struct FvmCoeffs
 
     FVM::scalar k_;
     FVM::scalar A_;
-   
+
 };
 
 class FVMCalculateCoefficient
@@ -92,27 +92,28 @@ public:
         std::iota(values.begin(), values.end(), static_cast<int>(0));
         return values;
     }
-    std::vector<unsigned int> getFaceNumberWest() const
-    {
-        std::vector<unsigned int> values(fvmCoeffs.Ny_);
-        std::iota(values.begin(), values.end(), static_cast<int>(0));
-        for (auto &x : values | std::views::all)
-        {
-            x *= fvmCoeffs.Nx_;
-        }
-        return values;
-    }
 
-    std::vector<unsigned int> getFaceNumberEast() const
-    {
-        std::vector<unsigned int> values(fvmCoeffs.Ny_);
-        std::iota(values.begin(), values.end(), static_cast<int>(0));
-        for (auto &x : values | std::views::all)
-        {
-            x = x * (fvmCoeffs.Nx_)+ fvmCoeffs.Ny_-1;
-        }
-        return values;
-    }
+    // std::vector<unsigned int> getFaceNumberWest() const
+    // {
+    //     std::vector<unsigned int> values(fvmCoeffs.Ny_);
+    //     std::iota(values.begin(), values.end(), static_cast<int>(0));
+    //     for (auto &x : values | std::views::all)
+    //     {
+    //         x *= fvmCoeffs.Nx_;
+    //     }
+    //     return values;
+    // }
+    //
+    // std::vector<unsigned int> getFaceNumberEast() const
+    // {
+    //     std::vector<unsigned int> values(fvmCoeffs.Ny_);
+    //     std::iota(values.begin(), values.end(), static_cast<int>(0));
+    //     for (auto &x : values | std::views::all)
+    //     {
+    //         x = x * (fvmCoeffs.Nx_)+ fvmCoeffs.Ny_-1;
+    //     }
+    //     return values;
+    // }
     //
     // void apply_Boundary(const FVM::CardinalDirection& dir,const std::vector& value)
     // {

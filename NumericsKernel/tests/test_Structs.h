@@ -2,7 +2,7 @@
 
 struct NK_matrixBuilder : public::testing::Test {
 
-    LINALG::scalar tolerance = 1e-15;
+    KERNEL::scalar tolerance = 1e-15;
     unsigned int maxIter = 100000;
 
     //    ( 2 1 0 0 0 0 )    ( x_0 )       (1)
@@ -14,7 +14,7 @@ struct NK_matrixBuilder : public::testing::Test {
     //
     // solution: x = (0, 1, 0, 1, 0, 1)ˆT
     template<typename MatrixType>
-    void setSparseProblem_1(MatrixType& A, blaze::DynamicVector<LINALG::scalar>& b, blaze::DynamicVector<LINALG::scalar>& solution ) {
+    void setSparseProblem_1(MatrixType& A, KERNEL::vector& b, KERNEL::vector& solution ) {
 
         fillBand<MatrixType>( blaze::band(A,0), 2.0 );
         fillBand<MatrixType>( blaze::band(A,1), 1.0 );
@@ -45,7 +45,7 @@ struct NK_matrixBuilder : public::testing::Test {
     //    ( ... 0 0 0 0 0 0 0 1 0 0 0 -2)    ( x_N-1 )      (-N-4)
     //    solution: x = (1, 2, 3, 4, ... , N)ˆT
     template<typename MatrixType>
-    void setSparseProblem_2(MatrixType& A, blaze::DynamicVector<LINALG::scalar>& b, blaze::DynamicVector<LINALG::scalar>& solution )
+    void setSparseProblem_2(MatrixType& A, KERNEL::vector& b, KERNEL::vector& solution )
     {
         //only for problems bigger then 7
         fillBand<MatrixType>( blaze::band(A,0), -2.0 );
@@ -74,7 +74,7 @@ struct NK_matrixBuilder : public::testing::Test {
     //    ( ... 1 1 1 1 2 )    ( x_(N-1) )   ( N + Q )
     //    solution: x = (1, 2, 3, 4, ... , N)ˆT
     template<typename MatrixType>
-    void setDenseProblem_1(MatrixType& A, blaze::DynamicVector<LINALG::scalar>& b, blaze::DynamicVector<LINALG::scalar>& solution )
+    void setDenseProblem_1(MatrixType& A, KERNEL::vector& b, KERNEL::vector& solution )
     {
         auto N = A.rows();
         for (size_t  i = 0; i<N; ++i) {

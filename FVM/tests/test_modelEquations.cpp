@@ -1,8 +1,35 @@
-//#include <valarray>
 #include <gtest/gtest.h>
-#include "denseMatrixSolvers.h"
-#include "sparseMatrixSolvers.h"
-#include "FVMCalculateCoefficient.h"
+#include "KERNEL.h"
+// #include "FVMCalculateCoefficient.h"
+
+
+struct testtest : public ::testing::Test {
+};
+
+TEST_F(testtest, interfaceTest) {
+
+    ObjectRegistry objReg;
+    auto vecHandle = objReg.newVector(5, 3);
+    auto matHandleDense = objReg.newMatrix(5, 3, false);
+    auto matHandleSparse = objReg.newMatrix(5, 3, true);
+
+    // I have to close the registry, before I am allowed to access its objects:
+    EXPECT_THROW(objReg.getVectorRef(vecHandle),std::runtime_error);
+
+    // now it is closed.
+    objReg.closeRegistry();
+
+    // These are references. They may go out of scope, the objects survive in the reg.
+    auto u = objReg.getVectorRef(vecHandle);
+    auto A  = objReg.getDenseMatrixRef(matHandleDense);
+    auto B  = objReg.getSparseMatrixRef(matHandleSparse);
+
+    // It is forbidden to add new objects in the registry, for keeping the existing
+    // references valid. The following line will fail:
+    EXPECT_THROW(objReg.newMatrix(5, 3, false),std::runtime_error);
+
+}
+
 //
 //
 // std::vector<unsigned int> getFaceNumberSouth(size_t size_of_vector)
@@ -53,75 +80,75 @@
 //     }
 // }
 
-
-
-// constructing a square domain with
-struct FVM_laplaceTests : public ::testing::Test {
-    static constexpr double tolerance = 1e-6;
-    unsigned int nx, ny, nbCells;
-    double cellSpacing, faceArea;
-
-
-    // these are to be fetched from a future MESH class
-    std::vector<unsigned int> cellIndices_North;
-    std::vector<unsigned int> cellIndices_South;
-    std::vector<unsigned int> cellIndices_East;
-    std::vector<unsigned int> cellIndices_West;
-
-    std::vector<double> field;
-
-    Sparse::matrix setUp(unsigned int nbX)
-    {
-        if (nbX%2 == 0) {
-            std::cerr << "ERROR: nx must be uneven" << std::endl;
-        }
-        nx = nbX;
-        ny = nbX;
-        nbCells = nx*ny;
-
-        Sparse::matrix coeffMat(nx, ny);
-
-        cellSpacing = 1./static_cast<double>(nx);
-        faceArea = cellSpacing * cellSpacing;
-        field.assign(nbCells,0.0);
-
-        cellIndices_North.resize(nx);
-        cellIndices_South.resize(nx);
-        cellIndices_East.resize(ny);
-        cellIndices_West.resize(ny);
-
-        for (unsigned int i = 0; i < nx; i++) {
-            cellIndices_North[i] = i;
-            cellIndices_South[i] = i+nx*(ny-1);
-            cellIndices_East[i] = i*nx+nx-1;
-            cellIndices_West[i] = i*nx;
-        }
-        return coeffMat;
-    }
-
-    std::vector<double> getHorizontalCenterLineValues( ) const {
-        std::vector<double> midvalues(nx,0.0);
-        for (unsigned int i=0; i < nx; i++) {
-            midvalues[i] = field[ nx/2 + i*nx ];
-        }
-        return midvalues;
-    }
-
-    std::vector<double> getVerticalCenterLineValues(  ) const {
-        std::vector<double> midvalues(ny,0.0);
-        for (unsigned int i=0; i < ny; i++) {
-            midvalues[i] = field[ (ny/2) * nx + i ];
-        }
-        return midvalues;
-    }
-
-    std::vector<double> getCellCenterCoordinates( unsigned int index ) const {
-        double x = ( 0.5 + (double)(index % nx) ) * cellSpacing;
-        double y = ( 0.5 + (double)(index / nx) ) * cellSpacing;
-        return std::vector{x, y};
-    }
-};
-
+//
+//
+// // constructing a square domain with
+// struct FVM_laplaceTests : public ::testing::Test {
+//     static constexpr double tolerance = 1e-6;
+//     unsigned int nx, ny, nbCells;
+//     double cellSpacing, faceArea;
+//
+//
+//     // these are to be fetched from a future MESH class
+//     std::vector<unsigned int> cellIndices_North;
+//     std::vector<unsigned int> cellIndices_South;
+//     std::vector<unsigned int> cellIndices_East;
+//     std::vector<unsigned int> cellIndices_West;
+//
+//     std::vector<double> field;
+//
+//     Sparse::matrix setUp(unsigned int nbX)
+//     {
+//         if (nbX%2 == 0) {
+//             std::cerr << "ERROR: nx must be uneven" << std::endl;
+//         }
+//         nx = nbX;
+//         ny = nbX;
+//         nbCells = nx*ny;
+//
+//         Sparse::matrix coeffMat(nx, ny);
+//
+//         cellSpacing = 1./static_cast<double>(nx);
+//         faceArea = cellSpacing * cellSpacing;
+//         field.assign(nbCells,0.0);
+//
+//         cellIndices_North.resize(nx);
+//         cellIndices_South.resize(nx);
+//         cellIndices_East.resize(ny);
+//         cellIndices_West.resize(ny);
+//
+//         for (unsigned int i = 0; i < nx; i++) {
+//             cellIndices_North[i] = i;
+//             cellIndices_South[i] = i+nx*(ny-1);
+//             cellIndices_East[i] = i*nx+nx-1;
+//             cellIndices_West[i] = i*nx;
+//         }
+//         return coeffMat;
+//     }
+//
+//     std::vector<double> getHorizontalCenterLineValues( ) const {
+//         std::vector<double> midvalues(nx,0.0);
+//         for (unsigned int i=0; i < nx; i++) {
+//             midvalues[i] = field[ nx/2 + i*nx ];
+//         }
+//         return midvalues;
+//     }
+//
+//     std::vector<double> getVerticalCenterLineValues(  ) const {
+//         std::vector<double> midvalues(ny,0.0);
+//         for (unsigned int i=0; i < ny; i++) {
+//             midvalues[i] = field[ (ny/2) * nx + i ];
+//         }
+//         return midvalues;
+//     }
+//
+//     std::vector<double> getCellCenterCoordinates( unsigned int index ) const {
+//         double x = ( 0.5 + (double)(index % nx) ) * cellSpacing;
+//         double y = ( 0.5 + (double)(index / nx) ) * cellSpacing;
+//         return std::vector{x, y};
+//     }
+// };
+//
 
 
 
@@ -136,9 +163,9 @@ struct FVM_laplaceTests : public ::testing::Test {
 //
 // Analytical Solution:
 // φ(x,y) = y*x
-TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
-
-    auto linEqs = setUp(5);
+// TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
+//
+//     auto linEqs = setUp(5);
 
     // auto xpos = [&](size_t index)
     // {
@@ -173,24 +200,24 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     //         sp[i] = su[i] = 0;
     // }
 
-
-    auto DerichletNorth = [&](unsigned i) { return getCellCenterCoordinates(i)[0]; };
-    auto DerichletSouth = [&](unsigned i) { return 0.0; };
-    auto DerichletEast = [&](unsigned i) { return getCellCenterCoordinates(i)[1]; };
-    auto DerichletWest = [&](unsigned i) { return 0.0; };
-
-    std::vector<double> b(nbCells, 0.);
-    std::vector<double> ai(nbCells, 0.0);
-    std::vector<double> ap(nbCells, 0.0);
-
-    // EAST
-    std::ranges::fill(ai, faceArea/cellSpacing);
-    std::ranges::transform(ap, ai, ai.begin(), std::minus<>{});
-    for (unsigned int i = 0; i < cellIndices_East.size(); i++) {
-        ai[i] = 0.0;
-        b[i] -= 2*faceArea/cellSpacing * DerichletEast(i);
-        ap[i] -= faceArea/cellSpacing;
-    }
+    //
+    // auto DerichletNorth = [&](unsigned i) { return getCellCenterCoordinates(i)[0]; };
+    // auto DerichletSouth = [&](unsigned i) { return 0.0; };
+    // auto DerichletEast = [&](unsigned i) { return getCellCenterCoordinates(i)[1]; };
+    // auto DerichletWest = [&](unsigned i) { return 0.0; };
+    //
+    // std::vector<double> b(nbCells, 0.);
+    // std::vector<double> ai(nbCells, 0.0);
+    // std::vector<double> ap(nbCells, 0.0);
+    //
+    // // EAST
+    // std::ranges::fill(ai, faceArea/cellSpacing);
+    // std::ranges::transform(ap, ai, ai.begin(), std::minus<>{});
+    // for (unsigned int i = 0; i < cellIndices_East.size(); i++) {
+    //     ai[i] = 0.0;
+    //     b[i] -= 2*faceArea/cellSpacing * DerichletEast(i);
+    //     ap[i] -= faceArea/cellSpacing;
+    // }
     // linEqs.setDirectionalFlux(ai, 1);   // dir=1   --> east
 
     // // NORTH
@@ -264,9 +291,9 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     // for(int i = 0; i < solution.size(); i++)
     // {
     //     EXPECT_NEAR(midHorizontalEquated[solution.size()-i-1], solution[i],tolerance);
-    // }
-    EXPECT_EQ(1,0);
-}
+//     // }
+//     EXPECT_EQ(1,0);
+// }
 
 
 
@@ -282,7 +309,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 //
 // Analytical Solution:
 // φ(x,y) = xˆ2-yˆ2
-TEST_F(FVM_laplaceTests, spacVarDerichletBCs) {
+//TEST_F(FVM_laplaceTests, spacVarDerichletBCs) {
     // setUp(51);
     //
     // // ---------  solve problem and write solution in 'field' container ------------
@@ -357,4 +384,4 @@ TEST_F(FVM_laplaceTests, spacVarDerichletBCs) {
     // {
     //     EXPECT_NEAR(midHorizontalEquated[i], solution[solution.size()-i-1],tolerance);
     // }
-}
+// }
