@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "LinEqsSolvers.h"
-#include "test_Structs.h"
+#include "../../NumericsKernel/src/LinEqsSolvers.h"
+#include "KERNEL_test_Structs.h"
 
 using namespace LINEQSOLVERS;
 
@@ -47,31 +47,3 @@ TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
         EXPECT_NEAR(x[2], solution[2], 1e-8);
     }
 }
-
-
-//TEST_F(NK_matrixBuilder, Dense_run_all_tests)
-//{
-//    auto timer1 = timer();
-//    auto timer2 = timer();
-//    auto timer3 = timer();
-//
-//    int size = 1000;
-//    auto N = size;
-//    KERNEL::dmatrix A(N,N, 5*N);
-//    KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
-//    setSparseProblem_1<KERNEL::dmatrix>(A, b, solution);
-//
-//    timer1.start();
-//    //solve_GaussSeidel<KERNEL::dmatrix>( A, b, x, tolerance, maxIter);
-//    auto T1 = timer1.stop();
-//    timer2.start();
-//    solve_BiCGSTAB( A, b, x, tolerance, maxIter);
-//    auto T2 = timer2.stop();
-//    timer3.start();
-//    solve_BiCGSTAB<KERNEL::dmatrix>( A, b, x, tolerance, maxIter);
-//    auto T3 = timer3.stop();
-//
-//    std::cout << N << ", \t" << T1 << " ms, \t" << T2 << " ms, \t" << T3 << " ms " << std::endl;
-//
-//
-//}

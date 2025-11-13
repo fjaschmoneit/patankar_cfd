@@ -9,13 +9,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 # Create test executable
-add_executable(modelEquation_tests
-        test_modelEquations.cpp
+add_executable(tests_run
+        FVM_modelEquations_test.cpp
+        KERNEL_linearEquationSolver_test.cpp
+        KERNEL_performance_test.cpp
 )
 include_directories(/usr/local/include)
 
 # Link with GoogleTest and our static library
-target_link_libraries(modelEquation_tests
+target_link_libraries(tests_run
         PRIVATE
         gtest_main
         numerics_kernel_lib
@@ -23,4 +25,4 @@ target_link_libraries(modelEquation_tests
 
 # Include GoogleTest
 include(GoogleTest)
-gtest_discover_tests(modelEquation_tests)
+gtest_discover_tests(tests_run)

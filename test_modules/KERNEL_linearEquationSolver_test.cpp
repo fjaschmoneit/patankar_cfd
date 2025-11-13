@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "LinEqsSolvers.h"
-#include "test_Structs.h"
+#include "../../NumericsKernel/src/LinEqsSolvers.h"
+#include "KERNEL_test_Structs.h"
 
 using namespace LINEQSOLVERS;
 

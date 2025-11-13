@@ -22,9 +22,9 @@ add_library(numerics_kernel_lib STATIC
 # Set include directories for the library
 target_include_directories(numerics_kernel_lib
         PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/../include
+        ../include
         PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
+        .
 )
 
 

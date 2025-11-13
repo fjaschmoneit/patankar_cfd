@@ -10,5 +10,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable testing
 enable_testing()
 
-add_subdirectory(FVM)
-add_subdirectory(NumericsKernel)
+add_subdirectory(modules/FVM)
+add_subdirectory(modules/NumericsKernel)
+add_subdirectory(test_modules)

@@ -1,10 +1,8 @@
 #include <gtest/gtest.h>
 #include "KERNEL.h"
 #include <numeric>
-
 #include "../../NumericsKernel/src/LinEqsSolvers.h"
 #include "blaze/Blaze.h"
-// #include "FVMCalculateCoefficient.h"
 
 
 struct kernelInterface : public ::testing::Test {
@@ -33,58 +31,6 @@ TEST_F(kernelInterface, interfaceTest) {
     EXPECT_THROW(objReg.newMatrix(5, 3, false),std::runtime_error);
 
 }
-
-//
-//
-// std::vector<unsigned int> getFaceNumberSouth(size_t size_of_vector)
-// {
-//     std::vector<unsigned int> values(size_of_vector);
-//     std::iota(values.begin(), values.end(), static_cast<int>(size_of_vector * (size_of_vector-1)));
-//     return values;
-// }
-// std::vector<unsigned int> getFaceNumberNorth(size_t size_of_vector)
-// {
-//     std::vector<unsigned int> values(size_of_vector);
-//     std::iota(values.begin(), values.end(), static_cast<int>(0));
-//     return values;
-// }
-// std::vector<unsigned int> getFaceNumberWest(size_t size_of_vector)
-// {
-//     std::vector<unsigned int> values(size_of_vector);
-//     std::iota(values.begin(), values.end(), static_cast<int>(0));
-//     for (auto &x : values | std::views::all)
-//     {
-//         x *= size_of_vector;
-//     }
-//     return values;
-// }
-//
-// std::vector<unsigned int> getFaceNumberEast(size_t size_of_vector)
-// {
-//     std::vector<unsigned int> values(size_of_vector);
-//     std::iota(values.begin(), values.end(), static_cast<int>(0));
-//     for (auto &x : values | std::views::all)
-//     {
-//         x = x * (size_of_vector)+ size_of_vector-1;
-//     }
-//     return values;
-// }
-// face ændre navn til bounadry cells indicies
-//
-// void apply_Boundary(const std::vector<FVM::scalar>& value, std::vector<unsigned int> Faces, std::vector<FVM::scalar>& input, std::vector<FVM::scalar>& Su, std::vector<FVM::scalar>& Sp,double A,double dx)
-// {
-//     unsigned int i = 0;
-//     //apply Direchtly boundary condition.
-//     for (const unsigned int face : Faces)
-//     {
-//         Sp[face] += -2 * A / dx;
-//         Su[face] +=  -2 * A / dx * value[i];
-//         input[face] = 0;
-//         i++;
-//     }
-// }
-
-
 
 // constructing a square domain with
 struct FVM_laplaceTests : public ::testing::Test {
@@ -134,22 +80,6 @@ struct FVM_laplaceTests : public ::testing::Test {
         return objReg;
     }
 
-    // std::vector<double> getHorizontalCenterLineValues( ) const {
-    //     std::vector<double> midvalues(nx,0.0);
-    //     for (unsigned int i=0; i < nx; i++) {
-    //         midvalues[i] = field[ nx/2 + i*nx ];
-    //     }
-    //     return midvalues;
-    // }
-    //
-    std::vector<double> getVerticalCenterLineValues( KERNEL::vector& field ) const {
-        std::vector<double> midvalues(ny,0.0);
-        for (unsigned int i=0; i < ny; i++) {
-            midvalues[i] = field[ (ny/2) * nx + i ];
-        }
-        return midvalues;
-    }
-
 };
 
 
@@ -164,8 +94,8 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
 
     auto u = objReg.getVectorRef(uHandle);
     auto b = objReg.getVectorRef(bHandle);
-    auto A = objReg.getDenseMatrixRef(AHandle);
-    // auto A = objReg.getSparseMatrixRef(AHandle);
+    // auto A = objReg.getDenseMatrixRef(AHandle);
+    auto A = objReg.getSparseMatrixRef(AHandle);
 
     // building matrix
     auto diagonal = blaze::band(A,0);
@@ -409,5 +339,5 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 // https://farside.ph.utexas.edu/teaching/329/lectures/node71.html
 TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
 
-
+    EXPECT_EQ(1,0);
 }
