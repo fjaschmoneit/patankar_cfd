@@ -1,3 +1,5 @@
+# FVM/tests/CMakeLists.txt
+
 include(FetchContent)
 FetchContent_Declare(
         googletest
@@ -17,7 +19,6 @@ target_link_libraries(modelEquation_tests
         PRIVATE
         gtest_main
         numerics_kernel_lib
-        modelEquation_lib
 )
 
 # Include GoogleTest

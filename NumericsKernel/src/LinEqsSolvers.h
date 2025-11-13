@@ -5,41 +5,20 @@
 #include "KernelTypeDefs.h"
 
 
-// template<typename MatrixType>
-// class matrix {
-//
-// public:
-//     MatrixType data_;
-//
-//
-//     // remove them here
-//
-//     blaze::Band<MatrixType> ap_;
-//     blaze::Band<MatrixType> ae_;
-//     blaze::Band<MatrixType> aw_;
-//     blaze::Band<MatrixType> an_;
-//     blaze::Band<MatrixType> as_;
-//     std::vector<int> bands_;
-//
-//     matrix(unsigned int nx, unsigned int ny);
-// };
-
+// these should be removed
 template<typename MatrixType>
 void fillBand(blaze::Band<MatrixType> band, KERNEL::scalar value) {
     for(size_t i = 0; i < band.size(); i++)  band[i] = value;
 }
+
 
 template<typename MatrixType>
 void fillBand(blaze::Band<MatrixType> band, KERNEL::vector values) {
     for(size_t i = 0; i < band.size(); i++)  band[i] = values[i];
 }
 
-
-// free template class I cannot separate definition from implementation. That leads to linking error.
 template<typename MatrixType>
-void solve_BiCGSTAB(const MatrixType &A, const KERNEL::vector& b,
-    KERNEL::vector& x, const KERNEL::scalar tolerance, const unsigned int maxIter) {
-
+void checkLinEqSystemConsistency(const MatrixType& A, const KERNEL::vector& b) {
     if( blaze::isZero( A ) )
     {
         throw std::invalid_argument("Error in A is empty");
@@ -48,142 +27,131 @@ void solve_BiCGSTAB(const MatrixType &A, const KERNEL::vector& b,
     {
         throw std::invalid_argument("Error in B is not same side as Row of A");
     }
-    using blaze::dot;
-    using blaze::norm;
-
-    const std::size_t n = A.rows();
-    KERNEL::vector r0( b - A * x );
-    KERNEL::vector r  = r0;
-    KERNEL::vector p  = r;
-    KERNEL::vector v(n, 0.0), s(n, 0.0), t(n, 0.0);
-
-    KERNEL::scalar rho  = dot(r0, r0);
-    KERNEL::scalar alpha = 0.0, omega = 0.0, rho1 = 0.0, beta = 0.0;
-
-
-    const KERNEL::scalar normb = std::max(norm( b ), 1e-30);
-    KERNEL::scalar normres = norm(r0);
-    KERNEL::scalar relres  = normres / normb;
-
-    const KERNEL::scalar norm_b = std::max(norm( b ), 1e-30);
-
-    KERNEL::scalar norm_res = norm(r0);
-    KERNEL::scalar rel_res  = norm_res / norm_b;
-
-    std::size_t it = 0;
-    while (rel_res > tolerance && it < maxIter)
-    {
-        v    = A * p;
-        KERNEL::scalar vr0 = dot(v, r0);
-        if (std::fabs(vr0) < 1e-30) break;
-
-        alpha = rho / vr0;
-
-        s = r - alpha * v;
-        t = A * s;
-
-        KERNEL::scalar tt = dot(t, t);
-        if (tt <= 0.0) break;
-
-        omega = dot(t, s) / tt;
-        if (std::fabs(omega) < 1e-30) break;
-
-        x = x + alpha * p + omega * s;
-        r = s - omega * t;
-
-        rho1 = dot(r, r0);
-        beta = (rho1 / rho) * (alpha / omega);
-        p = r + beta * (p - omega * v);
-        rho = rho1;
-
-        norm_res = norm(r);
-        rel_res  = norm_res / norm_b;
-        ++it;
-    }
-
-    if (rel_res <= tolerance)
-        std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations\n";
-    else
-        std::cout << "Bi_CG_STAB_sparse NOT converged (iters=" << it << ", rel res=" << rel_res << ").\n";
 }
 
-// matrix A is not const, I could overwrite it, in order to save memory
-template<typename MatrixType>
-void solve_GaussSeidel(MatrixType &A, KERNEL::vector &b, KERNEL::vector &x, KERNEL::scalar tolerance, unsigned int maxIter) {
-    auto n = A.rows();
-    KERNEL::vector x_old = x;
 
-    // copy
-    KERNEL::dmatrix DL(A);
+namespace LINEQSOLVERS {
 
-    // DL = lower triangular with diagonal
-    for(size_t i = 0; i < n; ++i) {
-        for(size_t j = i+1; j < n; ++j) {
-            DL(i, j) = 0.0;
-        }
-    }
+    // A must be strictly diagonal dominant
+    void solve_GaussSeidel( const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter);
 
-    auto invDL = blaze::inv( DL );
+    void solve_Jacobi(      const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const KERNEL::scalar tolerance, const unsigned int maxIter);
 
-    auto c = invDL*b;
-    auto G = -invDL*(A-DL);
+    // free template class I cannot separate definition from implementation. That leads to linking error.
+    template<typename MatrixType>
+    void solve_BiCGSTAB(const MatrixType &A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter) {
 
-    // here I could free A,DL,invDL
+        const std::size_t n = A.rows();
+        KERNEL::vector r0( b - A * x );
+        KERNEL::vector r  = r0;
+        KERNEL::vector p  = r;
+        KERNEL::vector v(n, 0.0), s(n, 0.0), t(n, 0.0);
 
-    for( int k = 0; k < maxIter; ++k )
-    {
-        // Using G and c for faster code.
-        // x = G * x_old + c
-        // x = invDL* (bb_-R * x_old);
-        x = G*x_old + c;
+        KERNEL::scalar rho  = blaze::dot(r0, r0);
+        KERNEL::scalar alpha = 0.0, omega = 0.0, rho1 = 0.0, beta = 0.0;
 
-        if( blaze::norm( x - x_old ) < tolerance )
+        const KERNEL::scalar normb = std::max(blaze::norm( b ), 1e-30);
+        KERNEL::scalar normres = blaze::norm(r0);
+        KERNEL::scalar relres  = normres / normb;
+
+        const KERNEL::scalar norm_b = std::max(blaze::norm( b ), 1e-30);
+
+        KERNEL::scalar norm_res = blaze::norm(r0);
+        KERNEL::scalar rel_res  = norm_res / norm_b;
+
+        std::size_t it = 0;
+        while (rel_res > tolerance && it < maxIter)
         {
-            std::cout << "Gauss-Seidel solver converged after " << k << " iterations." << std::endl;
-            break;
+            v    = A * p;
+            KERNEL::scalar vr0 = blaze::dot(v, r0);
+            if (std::fabs(vr0) < 1e-30) break;
+
+            alpha = rho / vr0;
+
+            s = r - alpha * v;
+            t = A * s;
+
+            KERNEL::scalar tt = blaze::dot(t, t);
+            if (tt <= 0.0) break;
+
+            omega = blaze::dot(t, s) / tt;
+            if (std::fabs(omega) < 1e-30) break;
+
+            x = x + alpha * p + omega * s;
+            r = s - omega * t;
+
+            rho1 = blaze::dot(r, r0);
+            beta = (rho1 / rho) * (alpha / omega);
+            p = r + beta * (p - omega * v);
+            rho = rho1;
+
+            norm_res = blaze::norm(r);
+            rel_res  = norm_res / norm_b;
+            ++it;
         }
-        x_old = x;
+
+        if (rel_res <= tolerance)
+            std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations\n";
+        else
+            std::cout << "Bi_CG_STAB_sparse NOT converged (iters=" << it << ", rel res=" << rel_res << ").\n";
     }
+
+
+
+    // use blaze's own linear equation solver for dense matrices.
+
+    // template<typename MatrixType>
+    // void solve_GaussSeidel1(const MatrixType& A, const KERNEL::vector& b, KERNEL::vector& x, const KERNEL::scalar tolerance, const unsigned int maxIter)
+    // {
+    //     std::cout<<"GaussSeidel1 solver started."<<std::endl;
+    //
+    //     auto n = A.rows();
+    //     KERNEL::vector x_old = x;
+    //
+    //     // copy to DENSE matrix. Not good
+    //     KERNEL::dmatrix DL(A);
+    //
+    //     // DL = lower triangular with diagonal
+    //     for(size_t i = 0; i < n; ++i) {
+    //         for(size_t j = i+1; j < n; ++j) {
+    //             DL(i, j) = 0.0;
+    //         }
+    //     }
+    //     std::cout << DL << std::endl;
+    //
+    //     // KERNEL::dmatrix B = A-DL;  // strictly upper triangular
+    //
+    //     // blaze::invert( DL );
+    //
+    //     // auto invDL = blaze::inv( DL );
+    //
+    //     // std::cout << invDL << std::endl;
+    //     //
+    //     // auto c = invDL*b;
+    //     // auto G = -invDL*(A-DL);
+    //
+    //     std::cout << A << std::endl;
+    //     std::cout << A-DL << std::endl;
+    //     // std::cout << c << std::endl;
+    //     // std::cout << G << std::endl;
+    //
+    //     // here I could free A,DL,invDL
+    //     //
+    //     for( int k = 0; k < maxIter; ++k )
+    //     {
+    //     //     // Using G and c for faster code.
+    //     //     // x = G * x_old + c
+    //     //     // x = invDL* (bb_-R * x_old);
+    //
+    //         // x = G*x_old + c;
+    //
+    //         if( blaze::norm( x - x_old ) < tolerance )
+    //         {
+    //             std::cout << "Gauss-Seidel solver converged after " << k << " iterations." << std::endl;
+    //             break;
+    //         }
+    //         x_old = x;
+    //     }
+    // }
+
 }
-
-template<typename MatrixType>
-void solve_JacobiIter(MatrixType &A, KERNEL::vector &b, KERNEL::vector &x, KERNEL::scalar tolerance, unsigned int maxIter)
-{
-
-     auto rows = A.rows();
-     //KERNEL::vector x_old ;
-     // we need to make a xold as input.
-     blaze::DynamicVector<double> x_old( rows, 0.0 );
-     blaze::DynamicMatrix<KERNEL::scalar> B = A;     // deep copy
-
-
-
-    //deep copy and diagonal vector as it not working for dense matrix
-     KERNEL::vector dvec( A.rows() );
-     dvec = blaze::diagonal( A );
-     auto invD = KERNEL::scalar(1.0) / dvec;
-
-     //for dense Matrix, used the this
-     //auto d = blaze::diagonal(A);  // view af diagonalen
-     //auto invD = 1.0/d;
-
-     blaze::DiagonalMatrix< KERNEL::smatrix > invDSparse( A.rows() );
-     blaze::diagonal( invDSparse ) = invD;
-     blaze::diagonal(B) = 0.0;
-    int k;
-     for (k = 0; k < maxIter; ++k)
-     {
-         auto rhs = b - B * x_old;
-         x = invDSparse * rhs;
-         if ( blaze::norm(x-x_old) < tolerance)
-         {
-             std::cout<<"Jacobi solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
-             break;
-         }
-         x_old = x;
-     }
-     if ( k >= maxIter)
-     {
-         std::cerr<<"Jacobi solver did not converge within"<<  std::to_string(maxIter)<<" iterations."<<std::endl;
-     }
- }

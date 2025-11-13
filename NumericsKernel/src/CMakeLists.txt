@@ -1,3 +1,5 @@
+#  NumericsKernel/src/CMakeLists.txt
+
 cmake_minimum_required(VERSION 3.14)
 project(NumericsKernel_Lib VERSION 1.0.0 LANGUAGES CXX)
 
@@ -12,8 +14,8 @@ enable_testing()
 
 # Create static library for the linear solver
 add_library(numerics_kernel_lib STATIC
-        LinEqsSolvers.cpp
         KERNEL.cpp
+        LinEqsSolvers.cpp
 )
 
 
@@ -52,4 +54,4 @@ target_compile_definitions(numerics_kernel_lib PRIVATE
 )
 
 # Link the library with Accelerate so symbols like dgesv_ resolve
-target_link_libraries(numerics_kernel_lib PRIVATE ${ACCELERATE_FRAMEWORK})
+target_link_libraries(numerics_kernel_lib PUBLIC ${ACCELERATE_FRAMEWORK})

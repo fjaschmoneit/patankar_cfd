@@ -1,15 +1,15 @@
 #include "../include/KERNEL.h"
-// #include "LinEqsSolvers.h"
+#include "LinEqsSolvers.h"
 #include "blaze/Blaze.h"
 
-ObjectRegistry::ObjectRegistry() = default;
-ObjectRegistry::~ObjectRegistry() = default;
-ObjectRegistry::ObjectRegistry(ObjectRegistry&&) noexcept = default;
-ObjectRegistry& ObjectRegistry::operator=(ObjectRegistry&&) noexcept = default;
-
+// make object registry to have own files.
+KERNEL::ObjectRegistry::ObjectRegistry() = default;
+KERNEL::ObjectRegistry::~ObjectRegistry() = default;
+KERNEL::ObjectRegistry::ObjectRegistry(ObjectRegistry&&) noexcept = default;
+KERNEL::ObjectRegistry& KERNEL::ObjectRegistry::operator=(ObjectRegistry&&) noexcept = default;
 
 // Vector creation
-VectorHandle ObjectRegistry::newVector(size_t size, KERNEL::scalar initialValue) {
+KERNEL::VectorHandle KERNEL::ObjectRegistry::newVector(size_t size, KERNEL::scalar initialValue) {
     if (registryClosed_)
         throw std::runtime_error("Registry closed. New objects must be defined before closing registry.");
 
@@ -20,11 +20,13 @@ VectorHandle ObjectRegistry::newVector(size_t size, KERNEL::scalar initialValue)
     return VectorHandle{id};
 }
 
-MatrixHandle ObjectRegistry::newMatrix(size_t rows, size_t cols, bool sparse) {
+KERNEL::MatrixHandle KERNEL::ObjectRegistry::newMatrix(size_t rows, size_t cols, bool sparse) {
     if (registryClosed_)
         throw std::runtime_error("Registry closed. New objects must be defined before closing registry.");
 
     auto id = nextID_++;
+    // nextID_ = nextID_ + 1;
+    // auto id = nextID_;
 
     if (sparse)
         registry_[id] = std::make_unique<KERNEL::smatrix>(rows, cols);
@@ -34,7 +36,7 @@ MatrixHandle ObjectRegistry::newMatrix(size_t rows, size_t cols, bool sparse) {
     return MatrixHandle{id};
 }
 
-KERNEL::vector& ObjectRegistry::getVectorRef(VectorHandle handle) {
+KERNEL::vector& KERNEL::ObjectRegistry::getVectorRef(VectorHandle handle) {
     if (!registryClosed_) {
         throw std::runtime_error("Close registry before accessing objects.");
     }
@@ -52,7 +54,7 @@ KERNEL::vector& ObjectRegistry::getVectorRef(VectorHandle handle) {
     return **vecPtr;
 }
 
-KERNEL::dmatrix& ObjectRegistry::getDenseMatrixRef(MatrixHandle handle) {
+KERNEL::dmatrix& KERNEL::ObjectRegistry::getDenseMatrixRef(MatrixHandle handle) {
 
     auto it = registry_.find(handle.id);
 
@@ -66,7 +68,7 @@ KERNEL::dmatrix& ObjectRegistry::getDenseMatrixRef(MatrixHandle handle) {
     return **matPtr;
 }
 
-KERNEL::smatrix& ObjectRegistry::getSparseMatrixRef(MatrixHandle handle) {
+KERNEL::smatrix& KERNEL::ObjectRegistry::getSparseMatrixRef(MatrixHandle handle) {
 
     auto it = registry_.find(handle.id);
 
@@ -78,4 +80,38 @@ KERNEL::smatrix& ObjectRegistry::getSparseMatrixRef(MatrixHandle handle) {
         throw std::runtime_error("Object is not a sparse matrix");
 
     return **matPtr;
+}
+
+std::shared_ptr<KERNEL::vector> KERNEL::newTempVector(size_t size) {
+    return std::make_shared<KERNEL::vector>(size, 0.0);
+}
+
+
+void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
+
+    // static_assert( std::is_same_v<decltype(A), const KERNEL::dmatrix& >, "Error in KERNEL::solve: input matrix not dense.");
+
+    checkLinEqSystemConsistency(A,b);
+
+    if (method == BiCGSTAB) {
+        LINEQSOLVERS::solve_BiCGSTAB(A, x, b, tolerance, maxIter);
+    }else if (method == GaussSeidel) {
+        LINEQSOLVERS::solve_GaussSeidel(A, x, b, tolerance, maxIter);
+    }else if (method == Jacobi) {
+        LINEQSOLVERS::solve_Jacobi(A, x, b, tolerance, maxIter);
+    }else if (method == Blaze_automatic) {
+        blaze::solve(A, x, b);
+    }
+}
+
+void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
+
+    // static_assert( std::is_same_v<decltype(A), const KERNEL::smatrix& >, "Error in KERNEL::solve: input matrix not sparse.");
+
+    checkLinEqSystemConsistency(A,b);
+
+    if (method == BiCGSTAB) {
+        LINEQSOLVERS::solve_BiCGSTAB(A, x, b, tolerance, maxIter);
+    }
+
 }

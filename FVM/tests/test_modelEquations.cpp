@@ -1,14 +1,18 @@
 #include <gtest/gtest.h>
 #include "KERNEL.h"
+#include <numeric>
+
+#include "../../NumericsKernel/src/LinEqsSolvers.h"
+#include "blaze/Blaze.h"
 // #include "FVMCalculateCoefficient.h"
 
 
-struct testtest : public ::testing::Test {
+struct kernelInterface : public ::testing::Test {
 };
 
-TEST_F(testtest, interfaceTest) {
+TEST_F(kernelInterface, interfaceTest) {
 
-    ObjectRegistry objReg;
+    KERNEL::ObjectRegistry objReg;
     auto vecHandle = objReg.newVector(5, 3);
     auto matHandleDense = objReg.newMatrix(5, 3, false);
     auto matHandleSparse = objReg.newMatrix(5, 3, true);
@@ -80,75 +84,119 @@ TEST_F(testtest, interfaceTest) {
 //     }
 // }
 
-//
-//
-// // constructing a square domain with
-// struct FVM_laplaceTests : public ::testing::Test {
-//     static constexpr double tolerance = 1e-6;
-//     unsigned int nx, ny, nbCells;
-//     double cellSpacing, faceArea;
-//
-//
-//     // these are to be fetched from a future MESH class
-//     std::vector<unsigned int> cellIndices_North;
-//     std::vector<unsigned int> cellIndices_South;
-//     std::vector<unsigned int> cellIndices_East;
-//     std::vector<unsigned int> cellIndices_West;
-//
-//     std::vector<double> field;
-//
-//     Sparse::matrix setUp(unsigned int nbX)
-//     {
-//         if (nbX%2 == 0) {
-//             std::cerr << "ERROR: nx must be uneven" << std::endl;
-//         }
-//         nx = nbX;
-//         ny = nbX;
-//         nbCells = nx*ny;
-//
-//         Sparse::matrix coeffMat(nx, ny);
-//
-//         cellSpacing = 1./static_cast<double>(nx);
-//         faceArea = cellSpacing * cellSpacing;
-//         field.assign(nbCells,0.0);
-//
-//         cellIndices_North.resize(nx);
-//         cellIndices_South.resize(nx);
-//         cellIndices_East.resize(ny);
-//         cellIndices_West.resize(ny);
-//
-//         for (unsigned int i = 0; i < nx; i++) {
-//             cellIndices_North[i] = i;
-//             cellIndices_South[i] = i+nx*(ny-1);
-//             cellIndices_East[i] = i*nx+nx-1;
-//             cellIndices_West[i] = i*nx;
-//         }
-//         return coeffMat;
-//     }
-//
-//     std::vector<double> getHorizontalCenterLineValues( ) const {
-//         std::vector<double> midvalues(nx,0.0);
-//         for (unsigned int i=0; i < nx; i++) {
-//             midvalues[i] = field[ nx/2 + i*nx ];
-//         }
-//         return midvalues;
-//     }
-//
-//     std::vector<double> getVerticalCenterLineValues(  ) const {
-//         std::vector<double> midvalues(ny,0.0);
-//         for (unsigned int i=0; i < ny; i++) {
-//             midvalues[i] = field[ (ny/2) * nx + i ];
-//         }
-//         return midvalues;
-//     }
-//
-//     std::vector<double> getCellCenterCoordinates( unsigned int index ) const {
-//         double x = ( 0.5 + (double)(index % nx) ) * cellSpacing;
-//         double y = ( 0.5 + (double)(index / nx) ) * cellSpacing;
-//         return std::vector{x, y};
-//     }
-// };
-//
+
+
+// constructing a square domain with
+struct FVM_laplaceTests : public ::testing::Test {
+    static constexpr double tolerance = 1e-6;
+    unsigned int nx, ny, nbCells;
+    double lenx, leny, cellSpacing, faceArea;
+    KERNEL::MatrixHandle AHandle;
+    KERNEL::VectorHandle uHandle;
+    KERNEL::VectorHandle bHandle;
+
+    // these are to be fetched from a future MESH class
+    std::vector<unsigned int> cellIndices_North;
+    std::vector<unsigned int> cellIndices_South;
+    std::vector<unsigned int> cellIndices_East;
+    std::vector<unsigned int> cellIndices_West;
+
+    KERNEL::ObjectRegistry setUp(KERNEL::scalar length, unsigned int nbX)
+    {
+        if (nbX%2 == 0)
+            throw std::runtime_error("ERROR: nx must be uneven");
+
+        nx = nbX;
+        ny = nbX;
+        nbCells = nx*ny;
+        leny = length;
+        lenx = length;
+        KERNEL::ObjectRegistry objReg;
+        AHandle = objReg.newMatrix(nbCells, nbCells, true);
+        uHandle = objReg.newVector(nbCells);
+        bHandle = objReg.newVector(nbCells);
+        objReg.closeRegistry();
+
+        cellSpacing = lenx/static_cast<double>(nx);
+        faceArea = cellSpacing * cellSpacing;
+
+        cellIndices_North.resize(nx);
+        cellIndices_South.resize(nx);
+        cellIndices_East.resize(ny);
+        cellIndices_West.resize(ny);
+
+        for (unsigned int i = 0; i < nx; i++) {
+            cellIndices_North[i] = i;
+            cellIndices_South[i] = i+nx*(ny-1);
+            cellIndices_East[i] = i*nx+nx-1;
+            cellIndices_West[i] = i*nx;
+        }
+        return objReg;
+    }
+
+    // std::vector<double> getHorizontalCenterLineValues( ) const {
+    //     std::vector<double> midvalues(nx,0.0);
+    //     for (unsigned int i=0; i < nx; i++) {
+    //         midvalues[i] = field[ nx/2 + i*nx ];
+    //     }
+    //     return midvalues;
+    // }
+    //
+    std::vector<double> getVerticalCenterLineValues( KERNEL::vector& field ) const {
+        std::vector<double> midvalues(ny,0.0);
+        for (unsigned int i=0; i < ny; i++) {
+            midvalues[i] = field[ (ny/2) * nx + i ];
+        }
+        return midvalues;
+    }
+
+};
+
+
+TEST_F(FVM_laplaceTests, FVM_testtest) {
+
+    // nb of cells along one side
+    auto nbX = 81;
+
+    // setup() fills the registry with a matrix and a vector,
+    // the handles are members of the test struct
+    auto objReg = setUp(1.0, nbX);
+
+    auto u = objReg.getVectorRef(uHandle);
+    auto b = objReg.getVectorRef(bHandle);
+    auto A = objReg.getDenseMatrixRef(AHandle);
+    // auto A = objReg.getSparseMatrixRef(AHandle);
+
+    // building matrix
+    auto diagonal = blaze::band(A,0);
+    for (unsigned int i = 0; i < diagonal.size(); i++) {
+        diagonal[i] = 4.0;
+    }
+
+    auto aw = blaze::band(A,-1);
+    for (unsigned int i = 0; i < aw.size(); i++) {
+        aw[i] = 1.0;
+    }
+
+    auto ae = blaze::band(A,1);
+    for (unsigned int i = 0; i < ae.size(); i++) {
+        ae[i] = 2.0;
+    }
+
+    auto correctResult = *KERNEL::newTempVector(b.size());
+    std::iota(correctResult.begin(),correctResult.end(),1);
+
+    b = A*correctResult;
+
+    // an educated guess for u:
+    std::ranges::fill(u, 2.0);
+
+    KERNEL::solve(A, u, b, 1e-10, 1000, KERNEL::BiCGSTAB);
+
+    for (unsigned int i = 0; i < correctResult.size(); i++) {
+        EXPECT_NEAR(u[i], correctResult[i], 1e-4);
+    }
+}
 
 
 
@@ -163,137 +211,94 @@ TEST_F(testtest, interfaceTest) {
 //
 // Analytical Solution:
 // φ(x,y) = y*x
-// TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
-//
-//     auto linEqs = setUp(5);
+TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 
-    // auto xpos = [&](size_t index)
-    // {
-    //     return -dx/2 + static_cast<GLOBAL::scalar>(index+1)*dx;
-    // };
+    auto objReg = setUp(1.0, 11);
 
-        // ---------  solve problem and write solution in 'field' container ------------
+    auto A = objReg.getSparseMatrixRef(AHandle);
+    auto u = objReg.getVectorRef(uHandle);
+    auto b = objReg.getVectorRef(bHandle);
 
-    //
-    // // we should not save the boundary values in an extra vector.
-    // GLOBAL::vector b, vBoundary_Value_North, vBoundary_Value_East, vBoundary_Value_South, vBoundary_Value_West;
-    // for (unsigned int i=0; i < nx; i++)
-    // {
-    //     vBoundary_Value_South.push_back(0);
-    //     vBoundary_Value_North.push_back(xpos(i));
-    //     vBoundary_Value_West.push_back(0);
-    //     vBoundary_Value_East.push_back(xpos(nx-i-1));
-    // }
+    KERNEL::vector ae(nbCells, 0.0),aw(nbCells, 0.0),an(nbCells, 0.0),as(nbCells, 0.0),ap(nbCells, 0.0),sp(nbCells, 0.0),su(nbCells, 0.0);
 
-    //
-    // std::vector<GLOBAL::scalar> ae,aw,an,as,ap,sp,su;
-    // ae.assign(nx*ny,0.0);
-    // aw = an = as = as = ap = sp = su = ae;
-    //
-    // double de,dw,ds,dn,dp;
-    // dp = de = dw = ds = dn = 0.0;
-    // auto A = 1;
-    // for (unsigned int i=0; i < nx*ny; i++)
-    // {
-    //         dp = de = dw = ds = dn = A / dx;
-    //         ae[i] = aw[i] = an[i] = as[i] = de;
-    //         sp[i] = su[i] = 0;
-    // }
+    for (unsigned int i=0; i < nbCells; i++)
+    {
+            ae[i] = aw[i] = an[i] = as[i] = faceArea / cellSpacing;
+            ap[i] = -4 * faceArea / cellSpacing;
+    }
 
-    //
-    // auto DerichletNorth = [&](unsigned i) { return getCellCenterCoordinates(i)[0]; };
-    // auto DerichletSouth = [&](unsigned i) { return 0.0; };
-    // auto DerichletEast = [&](unsigned i) { return getCellCenterCoordinates(i)[1]; };
-    // auto DerichletWest = [&](unsigned i) { return 0.0; };
-    //
-    // std::vector<double> b(nbCells, 0.);
-    // std::vector<double> ai(nbCells, 0.0);
-    // std::vector<double> ap(nbCells, 0.0);
-    //
-    // // EAST
-    // std::ranges::fill(ai, faceArea/cellSpacing);
-    // std::ranges::transform(ap, ai, ai.begin(), std::minus<>{});
-    // for (unsigned int i = 0; i < cellIndices_East.size(); i++) {
-    //     ai[i] = 0.0;
-    //     b[i] -= 2*faceArea/cellSpacing * DerichletEast(i);
-    //     ap[i] -= faceArea/cellSpacing;
-    // }
-    // linEqs.setDirectionalFlux(ai, 1);   // dir=1   --> east
+    // EAST
+    for (unsigned int i = 0; i < ny; i++) {
+        auto xpos = lenx;
+        auto ypos = leny - (0.5+i)*cellSpacing;
+        auto j = nx-1 +i*nx;
+        ae[j] = 0.0;
+        b[j] -= 2*faceArea/cellSpacing * ypos*xpos;
+        ap[j] -= faceArea/cellSpacing;
+    }
 
-    // // NORTH
-    // std::ranges::fill(ai, faceArea/cellSpacing);
-    // std::ranges::transform(ap, ai, ai.begin(), std::minus<>{});
-    // for (unsigned int i = 0; i < cellIndices_North.size(); i++) {
-    //     ai[i] = 0.0;
-    //     b[i] -= 2*faceArea/cellSpacing * DerichletNorth(i);
-    //     ap[i] -= faceArea/cellSpacing;
-    // }
-    // linEqs.setDirectionalFlux(ai, 2);   // dir=2   --> north
-    //
-    // // WEST
-    // std::ranges::fill(ai, faceArea/cellSpacing);
-    // std::ranges::transform(ap, ai, ai.begin(), std::minus<>{});
-    // for (unsigned int i = 0; i < cellIndices_West.size(); i++) {
-    //     ai[i] = 0.0;
-    //     b[i] -= 2*faceArea/cellSpacing * DerichletWest(i);
-    //     ap[i] -= faceArea/cellSpacing;
-    // }
-    // linEqs.setDirectionalFlux(ai, 3);   // dir=3   --> west
-    //
-    // // SOUTH
-    // std::ranges::fill(ai, faceArea/cellSpacing);
-    // std::ranges::transform(ap, ai, ai.begin(), std::minus<>{});
-    // for (unsigned int i = 0; i < cellIndices_South.size(); i++) {
-    //     ai[i] = 0.0;
-    //     b[i] -= 2*faceArea/cellSpacing * DerichletSouth(i);
-    //     ap[i] -= faceArea/cellSpacing;
-    // }
-    // linEqs.setDirectionalFlux(ai, 4);   // dir=4   --> south
-    //
-    //
-    // linEqs.setDirectionalFlux(ai, 0);   // dir=0   --> centre
-    //
-    // field = linEqs.solve();
+    // NORTH
+    for (unsigned int i = 0; i < nx; i++) {
+        auto xpos = (0.5*cellSpacing + i*cellSpacing);
+        auto ypos = leny;
+        an[i] = 0.0;
+        b[i] -= 2*faceArea/cellSpacing * xpos*ypos;
+        ap[i] -= faceArea/cellSpacing;
+    }
 
-    //
-    // apply_Boundary(vBoundary_Value_North,getFaceNumberNorth(nx),an,su,sp,A,dx);
-    // apply_Boundary(vBoundary_Value_West, getFaceNumberWest(nx) ,aw,su,sp,A,dx);
-    // apply_Boundary(vBoundary_Value_East, getFaceNumberEast(nx) ,ae,su,sp,A,dx);
-    // apply_Boundary(vBoundary_Value_South,getFaceNumberSouth(nx),as,su,sp,A,dx);
-    // for (unsigned int i=0; i < nx*ny; i++)
-    // {
-    //    ap[i] = -(ae[i] + aw[i] + as[i] + an[i] - sp[i]);
-    // }
-    //
-    // linEqs.setDirectionalFlux(ap,FVM::CardinalDirection::centre);
-    // linEqs.setDirectionalFlux(ae,FVM::CardinalDirection::east);
-    // linEqs.setDirectionalFlux(aw,FVM::CardinalDirection::west);
-    // linEqs.setDirectionalFlux(as,FVM::CardinalDirection::south);
-    // linEqs.setDirectionalFlux(an,FVM::CardinalDirection::north);
-    // linEqs.setDirectionalFlux(su,FVM::CardinalDirection::su);
-    // field = linEqs.solve();
-    //
-    // auto midHorizontalEquated = getHorizontalCenterLineValues();
-    // auto midVerticalEquated = getVerticalCenterLineValues();
-    //
-    // // theoretical solution:
-    // std::vector<double> solution( nx, 0.0 );
-    // for (unsigned int i=0; i < nx; i++) {
-    //     auto x = 0.5;
-    //     auto y = 1.0 - ( 0.5 + i )*dx;
-    //     solution[i] = x*y;
-    // }
-    //
-    // for(int i = 0; i < solution.size(); i++)
-    // {
-    //     EXPECT_NEAR(midVerticalEquated[i], solution[i],tolerance);
-    // }
-    // for(int i = 0; i < solution.size(); i++)
-    // {
-    //     EXPECT_NEAR(midHorizontalEquated[solution.size()-i-1], solution[i],tolerance);
-//     // }
-//     EXPECT_EQ(1,0);
-// }
+    // WEST
+    for (unsigned int i = 0; i < ny; i++) {
+        auto xpos = 0.0;
+        auto ypos = (leny - 0.5*cellSpacing - i * cellSpacing);
+        auto j = i*nx;
+        aw[j] = 0.0;
+        b[j] -= 2*faceArea/cellSpacing * xpos*ypos;
+        ap[j] -= faceArea/cellSpacing;
+    }
+
+    // SOUTH
+    for (unsigned int i = 0; i < nx; i++) {
+        auto xpos = (0.5*cellSpacing + i*cellSpacing);
+        auto ypos = 0.0;
+        auto j = (ny-1)*nx + i;
+        as[j] = 0.0;
+        b[j] -= 2*faceArea/cellSpacing * xpos*ypos;
+        ap[j] -= faceArea/cellSpacing;
+    }
+
+    for (unsigned int i = 0; i < ap.size(); i++) {
+        blaze::band(A,0)[i] = ap[i];
+    }
+    for (unsigned int i = 0; i < ap.size() -1; i++) {
+        blaze::band(A,1)[i] = ae[i];
+    }
+    for (unsigned int i = 0; i < ap.size()-1; i++) {
+        blaze::band(A,-1)[i] = aw[i+1];
+    }
+    for (unsigned int i = 0; i < ap.size()-nx; i++) {
+        blaze::band(A,nx)[i] = as[i];
+    }
+    int mnx = -1*nx;        // I don't see the necessity for that
+    for (unsigned int i = 0; i < ap.size()-nx; i++) {
+        blaze::band(A,mnx)[i] = an[i+nx];
+    }
+
+    KERNEL::solve(A, u, b, 1e-15, 1000, KERNEL::BiCGSTAB);
+
+    // theoretical solution, vertical mid-line at x = lenx/2
+    KERNEL::vector solution( nx, 0.0 );
+    for (unsigned int i=0; i < nx; i++) {
+        auto x = 0.5*lenx;
+        auto y = leny - ( 0.5 + i )*cellSpacing;
+        solution[i] = x*y;
+    }
+
+    for(int i = 0; i < solution.size(); i++)
+    {
+        auto j = nx/2 + nx*i;
+        EXPECT_NEAR(u[j], solution[i],tolerance);
+    }
+}
 
 
 
@@ -385,3 +390,24 @@ TEST_F(testtest, interfaceTest) {
     //     EXPECT_NEAR(midHorizontalEquated[i], solution[solution.size()-i-1],tolerance);
     // }
 // }
+
+
+// 2D Poisson Equation Test Case (Fitzpatrick Example)
+//
+// Problem Setup:
+// - Domain: 0 ≤ x ≤ 1, 0 ≤ y ≤ 1 (rectangular)
+// - PDE: ∇²φ = f(x,y)
+// - Source term: f(x,y) = 6xy (1-y) - 2x^3
+//
+// Boundary Conditions:
+// - Dirichlet: φ(x,0) = φ(x,1) = 0, φ(0,y) = 0,  φ(1,y) = y(1-y)
+//
+// Analytical Solution:
+// φ(x,y) = y*(1-y)x^3
+//
+// Reference: R. Fitzpatrick, "An example solution of Poisson's equation in 2-d"
+// https://farside.ph.utexas.edu/teaching/329/lectures/node71.html
+TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
+
+
+}
