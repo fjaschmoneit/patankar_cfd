@@ -15,7 +15,9 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
     solve_BiCGSTAB<KERNEL::smatrix>( A, x, b, AlgoTolerance, maxIter);
 
     for(int i = 0; i < solution.size(); i++)
+    {
         EXPECT_NEAR(x[i], solution[i], TestTolerance);
+    }
 }
 
 TEST_F(NK_matrixBuilder, sparseMatrix2_BiCGSTAB)
@@ -82,13 +84,21 @@ TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
     unsigned N = 40;
     KERNEL::dmatrix A(N,N, 5*N);
     KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
-
     setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
+    bool doesConverge = doesJacobiConverge(A);
+    EXPECT_FALSE(doesConverge);
+    if(doesConverge)
+    {
+        solve_Jacobi( A,x, b, AlgoTolerance, maxIter  );
+        for(int i = 0; i < solution.size(); i++)
+        {
+            EXPECT_NEAR(x[i], solution[i], TestTolerance);
+        }
+    }else
+    {
+        std::cout<<"Skipping solving, as the Jacobi method does not converge."<<std::endl;
+    }
 
-    solve_Jacobi( A,x, b, AlgoTolerance, maxIter  );
-
-    for(int i = 0; i < solution.size(); i++)
-        EXPECT_NEAR(x[i], solution[i], TestTolerance);
 }
 
 // TEST_F(NK_matrixBuilder, sparseMatrix1_GaussSeidel)
