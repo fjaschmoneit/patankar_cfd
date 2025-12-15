@@ -269,7 +269,7 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
 // φ(x,y) = y*x
 TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 
-    auto objReg = setUp(3.0, 3);
+    auto objReg = setUp(1.0, 3);
 
     auto A = objReg.getSparseMatrixRef(AHandle);
     auto u = objReg.getVectorRef(uHandle);
@@ -425,7 +425,7 @@ TEST_F(FVM_laplaceTests, spacVarDerichletBCsSpeed)
 {
 
     //auto objReg = setUp(1, 161);
-    auto objReg = setUp(3, 3);
+    auto objReg = setUp(1, 161);
 
     auto A = objReg.getSparseMatrixRef(AHandle);
     auto u = objReg.getVectorRef(uHandle);
@@ -546,7 +546,6 @@ TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
             unsigned int P = ix + jy * nx;
 
             double fP = 6.0 * xP * yP * (1.0 - yP) - 2.0 * xP * xP * xP;
-            //double V  = faceArea;  // = cellSpacing*cellSpacing
             double V = faceArea * cellSpacing;
 
             b[P] += fP * V;
@@ -580,7 +579,7 @@ TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
         auto ypos = (leny - 0.5*cellSpacing - i * cellSpacing);
         auto j = i*nx;
         aw[j] = 0.0;
-        b[j] -= 2*faceArea/cellSpacing * 0;//(xpos*xpos-ypos*ypos);
+        b[j] -= 2*faceArea/cellSpacing * 0;
         sp[j] -= 2*faceArea/cellSpacing;
         ap[j] -= faceArea/cellSpacing;
     }
@@ -591,7 +590,7 @@ TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
         auto ypos = 0.0;
         auto j = (ny-1)*nx + i;
         as[j] = 0.0;
-        b[j] -= 2*faceArea/cellSpacing * 0;//(xpos*xpos-ypos*ypos);
+        b[j] -= 2*faceArea/cellSpacing * 0;
         sp[j] -= 2*faceArea/cellSpacing;
         ap[j] -= faceArea/cellSpacing;
     }
