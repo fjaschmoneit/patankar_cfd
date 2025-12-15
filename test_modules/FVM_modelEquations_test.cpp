@@ -259,17 +259,17 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
 // 2D Laplace Equation with local BCs
 //
 // Problem Setup:
-// - Domain: 0 ≤ x ≤ nx, 0 ≤ y ≤ ny (rectangular)
+// - Domain: 0 ≤ x ≤ lx, 0 ≤ y ≤ ly (rectangular)
 // - ODE: ∇²φ = 0
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,1) = x*ny,  φ(1,y) = y*nx
+// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,1) = x*ly,  φ(1,y) = y*lx
 //
 // Analytical Solution:
 // φ(x,y) = y*x
 TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 
-    auto objReg = setUp(1.0, 11);
+    auto objReg = setUp(3.0, 3);
 
     auto A = objReg.getSparseMatrixRef(AHandle);
     auto u = objReg.getVectorRef(uHandle);
@@ -340,14 +340,9 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     for (unsigned int i = 0; i < ap.size()-nx; i++) {
         blaze::band(A,mnx)[i] = an[i+nx];
     }
-    KERNEL::vector ap1(ap.size(),0);
     for (unsigned int i = 0; i < ap.size(); i++)
     {
-        ap1[i] = -(ae[i] + aw[i] + as[i] + an[i] - sp[i]);
-    }
-    for (unsigned int i = 0; i < ap.size(); i++)
-    {
-        blaze::band(A,0)[i] = ap1[i];
+        blaze::band(A,0)[i] = ap[i];
     }
 
     KERNEL::solve(A, u, b, 1e-10, 1000, KERNEL::BiCGSTAB);
@@ -415,11 +410,22 @@ void buildMatrixWithBandsSpeed( KERNEL::smatrix &A,
     }
 }
 
+// 2D Laplace Equation with spacially varying BCs
+//
+// Problem Setup:
+// - Domain: 0 ≤ x ≤ lx, 0 ≤ y ≤ ly (rectangular)
+// - ODE: ∇²φ = 0
+//
+// Boundary Conditions:
+// - Dirichlet: φ(x,0) = xˆ2 , φ(0,y) = -yˆ2, φ(x,1) = xˆ2-ly^2,  φ(1,y) = lx^2-yˆ2
+//
+// Analytical Solution:
+// φ(x,y) = xˆ2-yˆ2
 TEST_F(FVM_laplaceTests, spacVarDerichletBCsSpeed)
 {
 
     //auto objReg = setUp(1, 161);
-    auto objReg = setUp(1, 161);
+    auto objReg = setUp(3, 3);
 
     auto A = objReg.getSparseMatrixRef(AHandle);
     auto u = objReg.getVectorRef(uHandle);
@@ -432,7 +438,7 @@ TEST_F(FVM_laplaceTests, spacVarDerichletBCsSpeed)
     for (unsigned int i=0; i < nbCells; i++)
     {
         ae[i] = aw[i] = an[i] = as[i] = faceArea / cellSpacing;
-        ap[i] = -4 * faceArea / cellSpacing;
+        ap[i] = -1 * faceArea / cellSpacing;
         sp[i] = 0;
     }
 
@@ -481,7 +487,6 @@ TEST_F(FVM_laplaceTests, spacVarDerichletBCsSpeed)
 
     buildMatrixWithBandsSpeed( A, ae, aw, as, an,sp, ap, nx);
     KERNEL::solve(A, u, b, 1e-15, 2000, KERNEL::BiCGSTAB);
-
     // theoretical solution, vertical mid-line at x = lenx/2
     KERNEL::vector solution( nx, 0.0 );
     for (unsigned int i=0; i < nx; i++) {
@@ -500,12 +505,12 @@ TEST_F(FVM_laplaceTests, spacVarDerichletBCsSpeed)
 // 2D Poisson Equation Test Case (Fitzpatrick Example)
 //
 // Problem Setup:
-// - Domain: 0 ≤ x ≤ 1, 0 ≤ y ≤ 1 (rectangular)
+// - Domain: 0 ≤ x ≤ lx, 0 ≤ y ≤ lx (rectangular)
 // - PDE: ∇²φ = f(x,y)
 // - Source term: f(x,y) = 6xy (1-y) - 2x^3
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = φ(x,1) = 0, φ(0,y) = 0,  φ(1,y) = y(1-y)
+// - Dirichlet: φ(x,0) = φ(x,1) = 0, φ(0,y) = 0,  φ(1,y) = y(1-y) * lx^3
 //
 // Analytical Solution:
 // φ(x,y) = y*(1-y)x^3
@@ -601,9 +606,6 @@ TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
         solution[i] = y*(1-y)*x*x*x;
     }
 
-    double maxError = 0.0;
-    int maxI = -1;   // index i i "solution"-vektoren (y-retning)
-    int maxJ = -1;   // globalt index j i u-vektoren
     for(int i = 0; i < solution.size(); i++)
     {
         auto j = nx/2 + nx*i;

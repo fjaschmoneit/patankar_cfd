@@ -4,11 +4,14 @@
 
 #ifndef FVMCalculatedCoefficient_H
 #define FVMCalculatedCoefficient_H
-#include <TypeDefs_FVM.h>
+#include <fstream>
 #include <iostream>
 #include <vector>
 #include <numeric>
 #include <ranges>
+
+#include "TypeDefs_FVM.h"
+#include "../../NumericsKernel/include/KernelTypeDefs.h"
 
 
 struct FvmCoeffs
@@ -160,6 +163,18 @@ private:
     void addCoefficientsToWestEastNortOrSouth(const FVM::CardinalDirection& dir, FVM::scalar& ai);
 };
 
+namespace saveFile
+{
+    inline void saveAsCSV(const KERNEL::vector& vec, const std::string& filename) {
+        std::ofstream file(filename);
+        for (size_t i = 0; i < vec.size(); ++i)
+        {
+            file << vec[i] << "\n";
+        }
+        file.close();
+        //saveAsCSV(field,"/Users/ri03jm/Library/Mobile Documents/com~apple~CloudDocs/DropboxFolder/Peter/skole/PhD/MatlabScript/output.csv");
+    }
+}
 
 
 #endif //FVMCalculatedCoefficient_H
