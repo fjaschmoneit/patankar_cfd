@@ -269,7 +269,7 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
 // φ(x,y) = y*x
 TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 
-    auto objReg = setUp(1.0, 3);
+    auto objReg = setUp(1.0, 11);
 
     auto A = objReg.getSparseMatrixRef(AHandle);
     auto u = objReg.getVectorRef(uHandle);
