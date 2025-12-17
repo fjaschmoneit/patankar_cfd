@@ -281,7 +281,6 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     {
             ae[i] = aw[i] = an[i] = as[i] = faceArea / cellSpacing;
             ap[i] = -4 * faceArea / cellSpacing;
-            sp[i] = 0;
     }
 
     // EAST
@@ -290,8 +289,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
         auto ypos = leny - (0.5+i)*cellSpacing;
         auto j = nx-1 +i*nx;
         ae[j] = 0.0;
-        b[j] -= 2*faceArea/cellSpacing * ypos * xpos;
-        sp[j] -= 2*faceArea/cellSpacing;
+        b[j] -= 2*faceArea/cellSpacing * ypos*xpos;
         ap[j] -= faceArea/cellSpacing;
     }
 
@@ -300,8 +298,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
         auto xpos = (0.5*cellSpacing + i*cellSpacing);
         auto ypos = leny;
         an[i] = 0.0;
-        b[i] -= 2*faceArea/cellSpacing * xpos * ypos;
-        sp[i] -= 2*faceArea/cellSpacing;
+        b[i] -= 2*faceArea/cellSpacing * xpos*ypos;
         ap[i] -= faceArea/cellSpacing;
     }
 
@@ -312,7 +309,6 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
         auto j = i*nx;
         aw[j] = 0.0;
         b[j] -= 2*faceArea/cellSpacing * xpos*ypos;
-        sp[j] -= 2*faceArea/cellSpacing;
         ap[j] -= faceArea/cellSpacing;
     }
 
@@ -323,10 +319,12 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
         auto j = (ny-1)*nx + i;
         as[j] = 0.0;
         b[j] -= 2*faceArea/cellSpacing * xpos*ypos;
-        sp[j] -= 2*faceArea/cellSpacing;
         ap[j] -= faceArea/cellSpacing;
     }
 
+    for (unsigned int i = 0; i < ap.size(); i++) {
+        blaze::band(A,0)[i] = ap[i];
+    }
     for (unsigned int i = 0; i < ap.size() -1; i++) {
         blaze::band(A,1)[i] = ae[i];
     }
@@ -340,13 +338,10 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     for (unsigned int i = 0; i < ap.size()-nx; i++) {
         blaze::band(A,mnx)[i] = an[i+nx];
     }
-    for (unsigned int i = 0; i < ap.size(); i++)
-    {
-        blaze::band(A,0)[i] = ap[i];
-    }
 
-    KERNEL::solve(A, u, b, 1e-10, 1000, KERNEL::BiCGSTAB);
+    KERNEL::solve(A, u, b, 1e-15, 1000, KERNEL::BiCGSTAB);
 
+    // theoretical solution, vertical mid-line at x = lenx/2
     KERNEL::vector solution( nx, 0.0 );
     for (unsigned int i=0; i < nx; i++) {
         auto x = 0.5*lenx;
