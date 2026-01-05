@@ -40,7 +40,11 @@ namespace LINEQSOLVERS {
         auto rows = A.rows();
         //KERNEL::vector x_old ;
         KERNEL::vector x_old = x;
-        KERNEL::dmatrix B = A;     // deep copy
+        // We perform a deep copy to ensure that the input matrix is not altered by this function.
+        // A more efficient strategy can be considered later.
+        // since the A matrix is const, which is a problem if we want to altered the A matrix
+        // Deep copy
+        KERNEL::dmatrix B = A;
 
         //deep copy and diagonal vector as it not working for dense matrix
         KERNEL::vector dvec( A.rows() );

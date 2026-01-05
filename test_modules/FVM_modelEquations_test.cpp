@@ -1,135 +1,6 @@
 #include <gtest/gtest.h>
 #include "KERNEL.h"
 #include <numeric>
-#include "../../NumericsKernel/src/LinEqsSolvers.h"
-#include "blaze/Blaze.h"
-
-template< typename T >
-void printBlaze( const T& expr,
-                 const std::string& name = "",
-                 int width = 10,
-                 int precision = 4 )
-{
-    std::ostream& os = std::cout;
-    // Fjern evt. proxy / reference via ~ (Blaze expression)
-    const auto& x = ~expr;
-
-    using BlazeType = blaze::RemoveReference_t< decltype( x ) >;
-
-    os.setf( std::ios::fixed );
-    os << std::setprecision( precision );
-
-    if( !name.empty() ) {
-        os << name;
-    }
-
-    // ----- Matrix -----
-    if constexpr( blaze::IsMatrix_v<BlazeType> )
-    {
-        const size_t m = x.rows();
-        const size_t n = x.columns();
-
-        if( !name.empty() ) {
-            os << " (" << m << "x" << n << ")";
-        }
-        os << ":\n";
-
-        for( size_t i = 0; i < m; ++i )
-        {
-            os << "(";
-            for( size_t j = 0; j < n; ++j )
-            {
-                os << std::setw( width ) << x(i,j);
-            }
-            os << " )\n";
-        }
-        os << std::endl;
-    }
-
-    // ----- Vector -----
-    else if constexpr( blaze::IsVector_v<BlazeType> )
-    {
-        const size_t n = x.size();
-
-        if( !name.empty() ) {
-            os << " (" << n << ")";
-        }
-        os << ":\n";
-
-        // Row vector
-        if constexpr( blaze::IsRowVector_v<BlazeType> )
-        {
-            os << "(";
-            for( size_t i = 0; i < n; ++i )
-            {
-                os << std::setw( width ) << x[i];
-            }
-            os << " )\n\n";
-        }
-        // Column vector
-        else
-        {
-            for( size_t i = 0; i < n; ++i )
-            {
-                os << "(" << std::setw( width ) << x[i] << " )\n";
-            }
-            os << std::endl;
-        }
-    }
-
-    // Hvis det hverken er matrix eller vektor → compile-time fejl
-    else {
-        static_assert( blaze::IsMatrix_v<BlazeType> || blaze::IsVector_v<BlazeType>,
-                       "printBlaze() expects a Blaze matrix or vector type" );
-    }
-}
-
-template< typename V1, typename V2 >
-void printBlazeVectorsSideBySide( const V1& a_in,
-                                  const V2& b_in,
-                                  const std::string& nameA = "a",
-                                  const std::string& nameB = "b",
-                                  std::ostream& os = std::cout,
-                                  int width = 12,
-                                  int precision = 6 )
-{
-    const auto& a = ~a_in;
-    const auto& b = ~b_in;
-
-    using TA = blaze::RemoveReference_t< decltype(a) >;
-    using TB = blaze::RemoveReference_t< decltype(b) >;
-
-    static_assert( blaze::IsVector_v<TA>, "First argument must be a Blaze vector" );
-    static_assert( blaze::IsVector_v<TB>, "Second argument must be a Blaze vector" );
-
-    if( a.size() != b.size() ) {
-        os << "ERROR: Vectors have different sizes ("
-           << a.size() << " vs " << b.size() << ")\n";
-        return;
-    }
-
-    const size_t n = a.size();
-
-    // Format
-    os.setf( std::ios::fixed );
-    os << std::setprecision( precision );
-
-    // Header
-    os << "Index" << std::setw(width) << nameA << std::setw(width) << nameB << "\n";
-    os << std::string(5 + 2*width, '-') << "\n";
-
-    // Print element by element
-    for( size_t i = 0; i < n; ++i )
-    {
-        os << std::setw(5) << i
-           << std::setw(width) << a[i]
-           << std::setw(width) << b[i]
-           << "\n";
-    }
-
-    os << std::endl;
-}
-
 
 struct kernelInterface : public ::testing::Test {
 };
@@ -263,7 +134,7 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
 // - ODE: ∇²φ = 0
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,1) = x*ly,  φ(1,y) = y*lx
+// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,ly) = x*ly,  φ(lx,y) = y*lx
 //
 // Analytical Solution:
 // φ(x,y) = y*x

@@ -15,11 +15,11 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
 
     setSparseProblem_1<KERNEL::smatrix>(A, b, solution);
 
-    solve_BiCGSTAB<KERNEL::smatrix>( A, x, b, AlgoTolerance, maxIter);
+    solve_BiCGSTAB<KERNEL::smatrix>( A, x, b, 1e-15, 10000);
 
     for(int i = 0; i < solution.size(); i++)
     {
-        EXPECT_NEAR(x[i], solution[i], TestTolerance);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
     }
 }
 
@@ -33,10 +33,10 @@ TEST_F(NK_matrixBuilder, sparseMatrix2_BiCGSTAB)
 
     setSparseProblem_2<KERNEL::smatrix>(A, b, solution);
 
-    solve_BiCGSTAB( A, x, b, AlgoTolerance, maxIter  );
+    solve_BiCGSTAB( A, x, b, 1e-15, 10000  );
 
     for(int i = 0; i < solution.size(); i++)
-        EXPECT_NEAR(x[i], solution[i], TestTolerance);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
 }
 
 // This test validates the BiCGSTAB solver on a dense linear system with 2 on the diagonal and 1 elsewhere.
@@ -49,10 +49,10 @@ TEST_F(NK_matrixBuilder, denseMatrix1_BiCGSTAB)
 
     setDenseProblem_1<KERNEL::smatrix>(A, b, solution);
 
-    solve_BiCGSTAB( A, x, b, AlgoTolerance, maxIter  );
+    solve_BiCGSTAB( A, x, b, 1e-15, 10000  );
 
     for(int i = 0; i < solution.size(); i++)
-        EXPECT_NEAR(x[i], solution[i], TestTolerance);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
 }
 
 // This test validates the Jacobi solver on a simple sparse upper-bidiagonal system (diag=2, superdiag=1) with a known exact solution.
@@ -65,11 +65,11 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_Jacobi)
 
     setSparseProblem_1<KERNEL::smatrix>(A, b, solution);
 
-    solve_Jacobi( A, x, b, AlgoTolerance, maxIter  );
+    solve_Jacobi( A, x, b, 1e-15, 10000  );
 
     for(int i = 0; i < solution.size(); i++)
     {
-        EXPECT_NEAR(x[i], solution[i], TestTolerance);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
     }
 }
 
@@ -83,10 +83,10 @@ TEST_F(NK_matrixBuilder, sparseMatrix2_Jacobi)
 
     setSparseProblem_2<KERNEL::smatrix>(A, b, solution);
 
-    solve_Jacobi( A, x, b, AlgoTolerance, maxIter  );
+    solve_Jacobi( A, x, b, 1e-15, 20000  );
 
     for(int i = 0; i < solution.size(); i++)
-        EXPECT_NEAR(x[i], solution[i], TestTolerance);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
 }
 
 // This test checks that the Jacobi method does NOT converge for the dense system from setDenseProblem_1 (diag=2, off-diagonals=1).
@@ -102,10 +102,10 @@ TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
     EXPECT_FALSE(doesConverge);
     if(doesConverge)
     {
-        solve_Jacobi( A,x, b, AlgoTolerance, maxIter  );
+        solve_Jacobi( A,x, b, 1e-15, 10000  );
         for(int i = 0; i < solution.size(); i++)
         {
-            EXPECT_NEAR(x[i], solution[i], TestTolerance);
+            EXPECT_NEAR(x[i], solution[i], 1e-8);
         }
     }else
     {
@@ -152,9 +152,9 @@ TEST_F(NK_matrixBuilder, denseMatrix1_GaussSeidel)
 
     setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
 
-    solve_GaussSeidel( A, x, b, AlgoTolerance, maxIter  );
+    solve_GaussSeidel( A, x, b, 1e-15, 10000  );
 
     for(int i = 0; i < solution.size(); i++)
-        EXPECT_NEAR(x[i], solution[i], TestTolerance);
+        EXPECT_NEAR(x[i], solution[i], 1e-8);
 }
 
