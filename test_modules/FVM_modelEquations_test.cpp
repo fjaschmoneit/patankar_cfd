@@ -110,6 +110,7 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
         ae[i] = 2.0;
     }
 
+    // why do we need the KERNEL::newTempVector method? Just defining a KERNEL::vector obejct only lives in scope
     auto correctResult = *KERNEL::newTempVector(b.size());
     std::iota(correctResult.begin(),correctResult.end(),1);
 
