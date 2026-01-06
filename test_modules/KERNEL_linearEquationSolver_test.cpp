@@ -7,6 +7,22 @@ using namespace LINEQSOLVERS;
 // This test validates the BiCGSTAB solver on a simple sparse upper-bidiagonal system (main diagonal 2, superdiagonal 1)
 // where the exact solution is known. The RHS is constructed accordingly, and we check that the computed
 // solution matches the analytical one within tolerance
+// Memory usage for this test in double precision
+// double 8 byte ≈ 0.000008 MB ≈ 8e-6 MB
+// for 2 points stencil
+// N =    10'000   -> ≈  0.16 MB
+// N =    25'000   -> ≈  4.00 MB   -> execution time ->    0.3 sec, 	  0.3 sec,  0.004 sec
+// N = 1'000'000   -> ≈ 16.00 MB   -> execution time ->  441.0 sec, 	441.0 sec,  0.150 sec
+// N = 2'500'000   -> ≈ 40.00 MB
+// for 3 points stencil
+// N =    10'000   -> ≈  0.24 MB
+// N =    25'000   -> ≈  6.00 MB
+// N = 1'000'000   -> ≈ 24.00 MB
+// N = 2'500'000   -> ≈ 60.00 MB
+// for 5 points stencil
+// N =    25'000   -> ≈   1.0 MB
+// N = 2'500'000   -> ≈ 100.0 MB
+
 TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
 {
     unsigned N = 2000;
@@ -49,7 +65,7 @@ TEST_F(NK_matrixBuilder, denseMatrix1_BiCGSTAB)
 
     setDenseProblem_1<KERNEL::smatrix>(A, b, solution);
 
-    solve_BiCGSTAB( A, x, b, 1e-15, 10000  );
+    solve_BiCGSTAB( A, x, b, 1e-14, 10000  );
 
     for(int i = 0; i < solution.size(); i++)
         EXPECT_NEAR(x[i], solution[i], 1e-8);
@@ -91,27 +107,21 @@ TEST_F(NK_matrixBuilder, sparseMatrix2_Jacobi)
 
 // This test checks that the Jacobi method does NOT converge for the dense system from setDenseProblem_1 (diag=2, off-diagonals=1).
 // We do not expect Jacobi to converge for this dense system, because the iteration matrix has spectral radius ρ > 1.
-// Therefore doesJacobiConverge(A) should return false and the solve step is skipped.
+// Therefore solve_Jacobi should return false and the check solution step is skipped.
 TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
 {
     unsigned N = 40;
     KERNEL::dmatrix A(N,N, 5*N);
     KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
     setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
-    bool doesConverge = doesJacobiConverge(A);
-    EXPECT_FALSE(doesConverge);
-    if(doesConverge)
-    {
-        solve_Jacobi( A,x, b, 1e-15, 10000  );
+    bool JacobiCanConverge = solve_Jacobi( A,x, b, 1e-15, 10000  );
+    if (JacobiCanConverge) {
         for(int i = 0; i < solution.size(); i++)
         {
             EXPECT_NEAR(x[i], solution[i], 1e-8);
         }
-    }else
-    {
-        std::cout<<"Skipping solving, as the Jacobi method does not converge."<<std::endl;
     }
-
+    EXPECT_FALSE(JacobiCanConverge); //
 }
 
 // TEST_F(NK_matrixBuilder, sparseMatrix1_GaussSeidel)

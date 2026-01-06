@@ -35,10 +35,9 @@ namespace LINEQSOLVERS {
     // A must be strictly diagonal dominant
     void solve_GaussSeidel( const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter);
 
-    void solve_Jacobi(      const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const KERNEL::scalar tolerance, const unsigned int maxIter);
+    bool solve_Jacobi(      const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const KERNEL::scalar tolerance, const unsigned int maxIter);
 
-    bool doesJacobiConverge(const KERNEL::dmatrix &A);
-
+    // todo BiCGSTAB is not working with single precisition problem, is have converge problems. We need to figure out why.
     // free template class I cannot separate definition from implementation. That leads to linking error.
     template<typename MatrixType>
     void solve_BiCGSTAB(const MatrixType &A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter) {

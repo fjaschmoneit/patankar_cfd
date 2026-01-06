@@ -3,65 +3,70 @@
 
 
 namespace LINEQSOLVERS {
-    bool doesJacobiConverge(const KERNEL::dmatrix &A)
+
+    template<typename MatrixType>
+    KERNEL::scalar CalMaxSpectralRadius(const MatrixType &M)
     {
-        auto rows = A.rows();
-        KERNEL::dmatrix B = A;     // deep copy
-
-        //deep copy
-        KERNEL::vector dvec( A.rows() );
-        dvec = blaze::diagonal( A );
-        auto invD = KERNEL::scalar(1.0) / dvec;
-
-        blaze::DiagonalMatrix< KERNEL::smatrix > invDSparse( A.rows() );
-        blaze::diagonal( invDSparse ) = invD;
-        blaze::diagonal(B) = 0.0;
-
-        // calculate spectralradius
-        // Iterationsmatrix G = -D^{-1} * (L+U)
-        KERNEL::dmatrix G = -invDSparse * B;
+        auto rows = M.rows();
         blaze::DynamicVector< std::complex<KERNEL::scalar> > lambda( rows );
+        KERNEL::dmatrix G = M; // deep copy to convert to dense matrix, as geev is not working with sparse matrices.
         blaze::geev( G, lambda );
-        auto rho = blaze::max( blaze::map( lambda, [](auto c){ return std::abs(c); } ) );
+        KERNEL::scalar rho = blaze::max( blaze::map( lambda, [](auto c){ return std::abs(c); } ) );
+
+        return rho;
+    }
+
+    bool doesJacobiConverge(const KERNEL::scalar& rho)
+    {
         if (rho<1)
         {
             std::cout << "Spectral radius = " << rho << " < 1 → Jacobi converges." << std::endl;
             return true;
         }else
         {
-            std::cout << "Spectral radius = " << rho << " ≥ 1 → Jacobi does not converge." << std::endl;
+            std::cerr << "Spectral radius = " << rho << " ≥ 1 → Jacobi does not converge." << std::endl;
             return false;
         }
     }
 
-
-    void solve_Jacobi(const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const KERNEL::scalar tolerance, const unsigned int maxIter)
+    bool solve_Jacobi(const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const KERNEL::scalar tolerance, const unsigned int maxIter)
     {
         auto rows = A.rows();
-        //KERNEL::vector x_old ;
         KERNEL::vector x_old = x;
         // We perform a deep copy to ensure that the input matrix is not altered by this function.
         // A more efficient strategy can be considered later.
         // since the A matrix is const, which is a problem if we want to altered the A matrix
         // Deep copy
-        KERNEL::dmatrix B = A;
+        KERNEL::dmatrix B = A; // B is L+U
 
         //deep copy and diagonal vector as it not working for dense matrix
         KERNEL::vector dvec( A.rows() );
         dvec = blaze::diagonal( A );
         auto invD = KERNEL::scalar(1.0) / dvec;
 
-        //for dense Matrix, used the this
-        //auto d = blaze::diagonal(A);  // view af diagonalen
-        //auto invD = 1.0/d;
-
         blaze::DiagonalMatrix< KERNEL::smatrix > invDSparse( A.rows() );
         blaze::diagonal( invDSparse ) = invD;
         blaze::diagonal(B) = 0.0;
+
+        // todo calc of Spectral radius is computationally heavy, as geev is working on sparse matrix and is slowly,
+        // Gershgorin circle theorem should be used instead of. See  https://en.wikipedia.org/wiki/Gershgorin_circle_theorem
+        if (rows<= 100)
+        {
+            // Mj = invDSparse * (-B)  Iteration matrix
+            // Nj = invDSparse * b
+            // x = Mj * x_old + Nj;
+            auto rho = CalMaxSpectralRadius(invDSparse * (-B));
+            if (!doesJacobiConverge(rho))
+            {
+                return false;
+            }
+        }
         int k;
         for (k = 0; k < maxIter; ++k)
         {
             auto rhs = b - B * x_old;
+            // Splitting method equation x = Mj * x_old + Nj; but we divide it into
+            // x = D^-1 * (b - B * X_old) to save memory, same executions time.
             x = invDSparse * rhs;
             if ( blaze::norm(x-x_old) < tolerance)
             {
@@ -72,8 +77,10 @@ namespace LINEQSOLVERS {
         }
         if ( k >= maxIter)
         {
-            std::cerr<<"Jacobi solver did not converge within"<<  std::to_string(maxIter)<<" iterations."<<std::endl;
+            std::cerr<<"Jacobi solver did not converge within "<<  std::to_string(maxIter)<<" iterations."<<std::endl;
+            return false;
         }
+        return true;
     }
 
     void solve_GaussSeidel(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter){
@@ -96,7 +103,18 @@ namespace LINEQSOLVERS {
         auto c = invDL*b;
         auto G = -invDL*(A-DL);
 
-        // here I could free A,DL,invDL
+        if (n<= 100)
+        {
+            // Mj = -invDL*(A-DL)  Iteration matrix
+            // Nj =  invDL*b
+            // x = Mj * x_old + Nj;
+            auto rho = CalMaxSpectralRadius(G);
+            if (!doesJacobiConverge(rho))
+            {
+                return;
+            }
+        }
+
         for( int k = 0; k < maxIter; ++k )
         {
             // Using G and c for faster code.
