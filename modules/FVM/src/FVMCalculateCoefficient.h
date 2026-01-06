@@ -4,15 +4,11 @@
 
 #ifndef FVMCalculatedCoefficient_H
 #define FVMCalculatedCoefficient_H
-#include <fstream>
-#include <iostream>
 #include <vector>
 #include <numeric>
 #include <ranges>
 
 #include "TypeDefs_FVM.h"
-#include "../../NumericsKernel/include/KernelTypeDefs.h"
-
 
 struct FvmCoeffs
 {
