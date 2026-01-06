@@ -44,7 +44,7 @@ struct FVM_laplaceTests : public ::testing::Test {
     std::vector<unsigned int> cellIndices_East;
     std::vector<unsigned int> cellIndices_West;
 
-    KERNEL::ObjectRegistry setUp(KERNEL::scalar length, unsigned int nbX)
+    KERNEL::ObjectRegistry setUp(GLOBAL::scalar length, unsigned int nbX)
     {
         if (nbX%2 == 0)
             throw std::runtime_error("ERROR: nx must be uneven");

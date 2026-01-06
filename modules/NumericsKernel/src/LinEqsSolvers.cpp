@@ -5,18 +5,18 @@
 namespace LINEQSOLVERS {
 
     template<typename MatrixType>
-    KERNEL::scalar CalMaxSpectralRadius(const MatrixType &M)
+    GLOBAL::scalar CalMaxSpectralRadius(const MatrixType &M)
     {
         auto rows = M.rows();
-        blaze::DynamicVector< std::complex<KERNEL::scalar> > lambda( rows );
+        blaze::DynamicVector< std::complex<GLOBAL::scalar> > lambda( rows );
         KERNEL::dmatrix G = M; // deep copy to convert to dense matrix, as geev is not working with sparse matrices.
         blaze::geev( G, lambda );
-        KERNEL::scalar rho = blaze::max( blaze::map( lambda, [](auto c){ return std::abs(c); } ) );
+        GLOBAL::scalar rho = blaze::max( blaze::map( lambda, [](auto c){ return std::abs(c); } ) );
 
         return rho;
     }
 
-    bool doesJacobiConverge(const KERNEL::scalar& rho)
+    bool doesJacobiConverge(const GLOBAL::scalar& rho)
     {
         if (rho<1)
         {
@@ -29,7 +29,7 @@ namespace LINEQSOLVERS {
         }
     }
 
-    bool solve_Jacobi(const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const KERNEL::scalar tolerance, const unsigned int maxIter)
+    bool solve_Jacobi(const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter)
     {
         auto rows = A.rows();
         KERNEL::vector x_old = x;
@@ -42,7 +42,7 @@ namespace LINEQSOLVERS {
         //deep copy and diagonal vector as it not working for dense matrix
         KERNEL::vector dvec( A.rows() );
         dvec = blaze::diagonal( A );
-        auto invD = KERNEL::scalar(1.0) / dvec;
+        auto invD = GLOBAL::scalar(1.0) / dvec;
 
         blaze::DiagonalMatrix< KERNEL::smatrix > invDSparse( A.rows() );
         blaze::diagonal( invDSparse ) = invD;
@@ -83,7 +83,7 @@ namespace LINEQSOLVERS {
         return true;
     }
 
-    void solve_GaussSeidel(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter){
+    void solve_GaussSeidel(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter){
 
         auto n = A.rows();
         KERNEL::vector x_old = x;
