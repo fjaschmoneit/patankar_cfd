@@ -16,19 +16,6 @@ namespace LINEQSOLVERS {
         return rho;
     }
 
-    bool doesJacobiConverge(const GLOBAL::scalar& rho)
-    {
-        if (rho<1)
-        {
-            std::cout << "Spectral radius = " << rho << " < 1 → Jacobi converges." << std::endl;
-            return true;
-        }else
-        {
-            std::cerr << "Spectral radius = " << rho << " ≥ 1 → Jacobi does not converge." << std::endl;
-            return false;
-        }
-    }
-
     bool solve_Jacobi(const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter)
     {
         auto rows = A.rows();
@@ -48,19 +35,12 @@ namespace LINEQSOLVERS {
         blaze::diagonal( invDSparse ) = invD;
         blaze::diagonal(B) = 0.0;
 
-        // todo calc of Spectral radius is computationally heavy, as geev is working on sparse matrix and is slowly,
+        // todo calc of Spectral radius is computationally heavy, as geev is not working on sparse matrix and is slowly,
         // Gershgorin circle theorem should be used instead of. See  https://en.wikipedia.org/wiki/Gershgorin_circle_theorem
-        if (rows<= 100)
-        {
-            // Mj = invDSparse * (-B)  Iteration matrix
-            // Nj = invDSparse * b
-            // x = Mj * x_old + Nj;
-            auto rho = CalMaxSpectralRadius(invDSparse * (-B));
-            if (!doesJacobiConverge(rho))
-            {
-                return false;
-            }
-        }
+        // Mj = invDSparse * (-B)  Iteration matrix
+        // Nj = invDSparse * b
+        // x = Mj * x_old + Nj;
+        //auto rho = CalMaxSpectralRadius(invDSparse * (-B));
         int k;
         for (k = 0; k < maxIter; ++k)
         {
@@ -103,20 +83,11 @@ namespace LINEQSOLVERS {
         auto c = invDL*b;
         auto G = -invDL*(A-DL);
 
-        if (n<= 100)
+        for( int k = 0; k < maxIter; ++k )
         {
             // Mj = -invDL*(A-DL)  Iteration matrix
             // Nj =  invDL*b
             // x = Mj * x_old + Nj;
-            auto rho = CalMaxSpectralRadius(G);
-            if (!doesJacobiConverge(rho))
-            {
-                return;
-            }
-        }
-
-        for( int k = 0; k < maxIter; ++k )
-        {
             // Using G and c for faster code.
             // x = G * x_old + c
             // x = invDL* (bb_-R * x_old);

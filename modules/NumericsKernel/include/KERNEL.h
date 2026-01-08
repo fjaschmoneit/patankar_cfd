@@ -18,8 +18,6 @@ namespace KERNEL {
     struct VectorHandle { size_t id; };
     struct MatrixHandle { size_t id; };
 
-    std::shared_ptr<KERNEL::vector> newTempVector(size_t size);
-
     void solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
     void solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
 

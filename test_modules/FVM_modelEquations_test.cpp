@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "KERNEL.h"
 #include <numeric>
+#include "Util.h"
 
 struct kernelInterface : public ::testing::Test {
 };
@@ -110,10 +111,7 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
         ae[i] = 2.0;
     }
 
-    // why do we need the KERNEL::newTempVector method? Just defining a KERNEL::vector obejct only lives in scope
-    auto correctResult = *KERNEL::newTempVector(b.size());
-    std::iota(correctResult.begin(),correctResult.end(),1);
-
+    auto correctResult = *KERNEL::vector(b.size());
     b = A*correctResult;
 
     // an educated guess for u:
@@ -228,9 +226,15 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     }
 }
 
-TEST_F(FVM_laplaceTests, FVM_localDerichletBCs2) {
-    unsigned int nbX = 401.0;
-    auto objReg = setUp(3.0, nbX);
+// This test work directly on Blaze band views.
+// This implementation is quite fast: ~3 s runtime for a 301×301 system in a Release build.
+// Reserving memory for the sparse matrix takes ~2.5 seconds, but once reserved the matrix assembly itself
+// takes only ~2 ms (when reusing the same A matrix is possible).
+// with out reserving is the execution time ~6 seconds
+TEST_F(FVM_laplaceTests, FVM_localDerichletBCs3)
+{
+    unsigned int nbX = 301.0;
+    auto objReg = setUp(1.0, nbX);
 
     auto A = objReg.getSparseMatrixRef(AHandle);
     auto u = objReg.getVectorRef(uHandle);
@@ -242,63 +246,69 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs2) {
     auto as = blaze::band(A,nx);
     auto an = blaze::band(A,static_cast<int>(-nx));
 
+    // reserve in sparse matrix.
+    A.reserve(nbCells * 5);
+    for (std::size_t r = 0; r < nbCells; ++r) A.reserve(r, 5);
+
+    // Collect A
     const GLOBAL::scalar pVal = -4.0 * faceArea / cellSpacing;
     const GLOBAL::scalar fVal =  1.0 * faceArea / cellSpacing;
 
-    //Collect A
     //Main Diagonal
     for (size_t i = 0; i < ap.size(); ++i) {ap[i] = pVal;}
-    for (size_t i = 0; i < cellIndices_East.size(); ++i){ap[cellIndices_East[i]]   -= fVal;}
-    for (size_t i = 0; i < cellIndices_West.size(); ++i){ap[cellIndices_West[i]]   -= fVal;}
-    for (size_t i = 0; i < cellIndices_North.size(); ++i){ap[cellIndices_North[i]] -= fVal;}
-    for (size_t i = 0; i < cellIndices_South.size(); ++i){ap[cellIndices_South[i]] -= fVal;}
+    for (auto p : cellIndices_West)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_East)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_North) {ap[p] -= fVal;}
+    for (auto p : cellIndices_South) {ap[p] -= fVal;}
 
     //East diagonal
     for (size_t i = 0; i < ap.size()-1; ++i){ae[i]   = fVal;}
-    for (size_t i = 0; i < cellIndices_East.size()-1; ++i){ae[cellIndices_East[i]]   -= fVal;}
+    for (size_t i = 0; i < cellIndices_East.size()-1; ++i){ae[cellIndices_East[i]]   = 0.0;}
 
     //West diagonal
     for (size_t i = 0; i < ap.size()-1; ++i){aw[i]   = fVal;}
-    for (size_t i = 0; i < cellIndices_West.size()-1; ++i){aw[cellIndices_East[i]]   -= fVal;}
+    for (size_t i = 1; i < cellIndices_West.size(); ++i) {aw[cellIndices_West[i]-1]   = 0.0;}
 
     //South
     for (size_t i = 0; i < ap.size()-nx; ++i){as[i]   = fVal;}
 
     //North
     for (size_t i = 0; i < ap.size()-nx; ++i){an[i]   = fVal;}
+    // Collect b for Dirichlet boundaries
+    const GLOBAL::scalar bVal = 2.0 * faceArea / cellSpacing;
 
-    //collect b
-    const GLOBAL::scalar bBal = 2.0 * faceArea / cellSpacing;
-    for (size_t i = 0; i < cellIndices_North.size(); ++i)
-    {
-        auto xpos = (0.5*cellSpacing + cellIndices_North[i]*cellSpacing);
-        auto ypos = leny;
-        b[cellIndices_North[i]]   -= bBal*xpos*ypos;
+    // NORTH
+    GLOBAL::scalar ypos = leny;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
     }
 
-    for (size_t i = 0; i < cellIndices_South.size(); ++i)
-    {
-        auto xpos = (0.5*cellSpacing + cellIndices_South[i]*cellSpacing);
-        auto ypos = 0;
-        b[cellIndices_South[i]]   -= bBal*xpos*ypos;
+    // SOUTH
+    ypos = 0.0;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = (ny-1) * nx + i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
     }
 
-    for (size_t i = 0; i < cellIndices_East.size(); ++i)
-    {
-        auto xpos = lenx;
-        auto ypos = leny - (0.5+i)*cellSpacing;
-        b[cellIndices_East[i]]   -= bBal*xpos*ypos;
+    // EAST
+    GLOBAL::scalar xpos = lenx;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx + (nx-1);
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
     }
 
-    for (size_t i = 0; i < cellIndices_West.size(); ++i)
-    {
-        auto xpos = 0.0;
-        auto ypos = (leny - 0.5*cellSpacing - i * cellSpacing);
-        auto j = i*nx;
-        b[cellIndices_West[i]]   -= bBal*xpos*ypos;
+    // WEST
+    xpos = 0.0;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx;
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
     }
-
-    KERNEL::solve(A, u, b, 1e-15, 1000, KERNEL::BiCGSTAB);
+    KERNEL::solve(A, u, b, 1e-15, 100000, KERNEL::BiCGSTAB);
 
     // theoretical solution, vertical mid-line at x = lenx/2
     KERNEL::vector solution( nx, 0.0 );
@@ -314,55 +324,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs2) {
         EXPECT_NEAR(u[j], solution[i],tolerance);
     }
 }
-void buildMatrixWithBandsSpeed( KERNEL::smatrix &A,
-                           const KERNEL::vector &ae,
-                           const KERNEL::vector &aw,
-                           const KERNEL::vector &as,
-                           const KERNEL::vector &an,
-                           const KERNEL::vector &sp,
-                           const KERNEL::vector &ap,
-                           std::size_t           nx )
-{
-    using std::size_t;
 
-    const size_t N = ap.size();
-
-    // Max ca. 5 ikke-nul per række (W, E, N, S, diag)
-    const size_t nnzPerRow = 5;
-    A.reserve( N * nnzPerRow );
-    for( size_t i = 0; i < N; ++i ) {
-        A.reserve( i, nnzPerRow );
-    }
-
-    // --- East AE
-    auto b1 = blaze::band( A, 1 );
-    for( size_t i = 0; i < N-1; ++i ) {
-        b1[i] = ae[i];
-    }
-
-    // --- West AW
-    auto bm1 = blaze::band( A, -1 );
-    for( size_t i = 0; i < N-1; ++i ) {
-        bm1[i] = aw[i+1];
-    }
-
-    // --- "Syd" AS
-    auto bnx = blaze::band( A, static_cast<std::ptrdiff_t>( nx ) );
-    for( size_t i = 0; i < N - nx; ++i ) {
-        bnx[i] = as[i];
-    }
-    // --- "Nord" AN
-    auto bmnx = blaze::band( A, -static_cast<std::ptrdiff_t>( nx ) );
-    for( size_t i = 0; i < N - nx; ++i ) {
-        bmnx[i] = an[i+nx];
-    }
-
-    // --- Diagonal AP
-    auto b0 = blaze::band( A, 0 );
-    for( size_t i = 0; i < N; ++i ) {
-        b0[i] = -( ae[i] + aw[i] + as[i] + an[i] - sp[i] );
-    }
-}
 
 // 2D Laplace Equation with spacially varying BCs
 //
@@ -371,7 +333,7 @@ void buildMatrixWithBandsSpeed( KERNEL::smatrix &A,
 // - ODE: ∇²φ = 0
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = xˆ2 , φ(0,y) = -yˆ2, φ(x,1) = xˆ2-ly^2,  φ(1,y) = lx^2-yˆ2
+// - Dirichlet: φ(x,0) = xˆ2 , φ(0,y) = -yˆ2, φ(x,ly) = xˆ2-ly^2,  φ(lx,y) = lx^2-yˆ2
 //
 // Analytical Solution:
 // φ(x,y) = xˆ2-yˆ2
@@ -439,7 +401,7 @@ TEST_F(FVM_laplaceTests, spacVarDerichletBCsSpeed)
         ap[j] -= faceArea/cellSpacing;
     }
 
-    buildMatrixWithBandsSpeed( A, ae, aw, as, an,sp, ap, nx);
+    //buildMatrixWithBandsSpeed( A, ae, aw, as, an,sp, ap, nx);
     KERNEL::solve(A, u, b, 1e-15, 2000, KERNEL::BiCGSTAB);
     // theoretical solution, vertical mid-line at x = lenx/2
     KERNEL::vector solution( nx, 0.0 );
@@ -549,7 +511,7 @@ TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
         ap[j] -= faceArea/cellSpacing;
     }
 
-    buildMatrixWithBandsSpeed( A, ae, aw, as, an,sp, ap, nx);
+    //buildMatrixWithBandsSpeed( A, ae, aw, as, an,sp, ap, nx);
     KERNEL::solve(A, u, b, 1e-15, 2000, KERNEL::BiCGSTAB);
 
     KERNEL::vector solution( nx, 0.0 );
