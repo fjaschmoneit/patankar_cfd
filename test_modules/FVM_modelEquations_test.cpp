@@ -227,6 +227,93 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
         EXPECT_NEAR(u[j], solution[i],tolerance);
     }
 }
+
+TEST_F(FVM_laplaceTests, FVM_localDerichletBCs2) {
+    unsigned int nbX = 401.0;
+    auto objReg = setUp(3.0, nbX);
+
+    auto A = objReg.getSparseMatrixRef(AHandle);
+    auto u = objReg.getVectorRef(uHandle);
+    auto b = objReg.getVectorRef(bHandle);
+
+    auto ap = blaze::band(A,0);
+    auto ae = blaze::band(A,1);
+    auto aw = blaze::band(A,-1);
+    auto as = blaze::band(A,nx);
+    auto an = blaze::band(A,static_cast<int>(-nx));
+
+    const GLOBAL::scalar pVal = -4.0 * faceArea / cellSpacing;
+    const GLOBAL::scalar fVal =  1.0 * faceArea / cellSpacing;
+
+    //Collect A
+    //Main Diagonal
+    for (size_t i = 0; i < ap.size(); ++i) {ap[i] = pVal;}
+    for (size_t i = 0; i < cellIndices_East.size(); ++i){ap[cellIndices_East[i]]   -= fVal;}
+    for (size_t i = 0; i < cellIndices_West.size(); ++i){ap[cellIndices_West[i]]   -= fVal;}
+    for (size_t i = 0; i < cellIndices_North.size(); ++i){ap[cellIndices_North[i]] -= fVal;}
+    for (size_t i = 0; i < cellIndices_South.size(); ++i){ap[cellIndices_South[i]] -= fVal;}
+
+    //East diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){ae[i]   = fVal;}
+    for (size_t i = 0; i < cellIndices_East.size()-1; ++i){ae[cellIndices_East[i]]   -= fVal;}
+
+    //West diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){aw[i]   = fVal;}
+    for (size_t i = 0; i < cellIndices_West.size()-1; ++i){aw[cellIndices_East[i]]   -= fVal;}
+
+    //South
+    for (size_t i = 0; i < ap.size()-nx; ++i){as[i]   = fVal;}
+
+    //North
+    for (size_t i = 0; i < ap.size()-nx; ++i){an[i]   = fVal;}
+
+    //collect b
+    const GLOBAL::scalar bBal = 2.0 * faceArea / cellSpacing;
+    for (size_t i = 0; i < cellIndices_North.size(); ++i)
+    {
+        auto xpos = (0.5*cellSpacing + cellIndices_North[i]*cellSpacing);
+        auto ypos = leny;
+        b[cellIndices_North[i]]   -= bBal*xpos*ypos;
+    }
+
+    for (size_t i = 0; i < cellIndices_South.size(); ++i)
+    {
+        auto xpos = (0.5*cellSpacing + cellIndices_South[i]*cellSpacing);
+        auto ypos = 0;
+        b[cellIndices_South[i]]   -= bBal*xpos*ypos;
+    }
+
+    for (size_t i = 0; i < cellIndices_East.size(); ++i)
+    {
+        auto xpos = lenx;
+        auto ypos = leny - (0.5+i)*cellSpacing;
+        b[cellIndices_East[i]]   -= bBal*xpos*ypos;
+    }
+
+    for (size_t i = 0; i < cellIndices_West.size(); ++i)
+    {
+        auto xpos = 0.0;
+        auto ypos = (leny - 0.5*cellSpacing - i * cellSpacing);
+        auto j = i*nx;
+        b[cellIndices_West[i]]   -= bBal*xpos*ypos;
+    }
+
+    KERNEL::solve(A, u, b, 1e-15, 1000, KERNEL::BiCGSTAB);
+
+    // theoretical solution, vertical mid-line at x = lenx/2
+    KERNEL::vector solution( nx, 0.0 );
+    for (unsigned int i=0; i < nx; i++) {
+        auto x = 0.5*lenx;
+        auto y = leny - ( 0.5 + i )*cellSpacing;
+        solution[i] = x*y;
+    }
+
+    for(int i = 0; i < solution.size(); i++)
+    {
+        auto j = nx/2 + nx*i;
+        EXPECT_NEAR(u[j], solution[i],tolerance);
+    }
+}
 void buildMatrixWithBandsSpeed( KERNEL::smatrix &A,
                            const KERNEL::vector &ae,
                            const KERNEL::vector &aw,
