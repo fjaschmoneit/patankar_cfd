@@ -34,14 +34,14 @@ void checkLinEqSystemConsistency(const MatrixType& A, const KERNEL::vector& b) {
 namespace LINEQSOLVERS {
 
     // A must be strictly diagonal dominant
-    void solve_GaussSeidel( const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
+    bool solve_GaussSeidel( const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
 
     bool solve_Jacobi(      const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
 
     // todo BiCGSTAB is not working with single precisition problem, is have converge problems. We need to figure out why.
     // free template class I cannot separate definition from implementation. That leads to linking error.
     template<typename MatrixType>
-    void solve_BiCGSTAB(const MatrixType &A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter) {
+    bool solve_BiCGSTAB(const MatrixType &A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter) {
 
         const std::size_t n = A.rows();
         KERNEL::vector r0( b - A * x );
@@ -62,7 +62,7 @@ namespace LINEQSOLVERS {
             if (std::fabs(vr0) < 1e-30)
             {
                 std::cerr << "BiCGSTAB breakdown: v·r0 ≈ 0 → cannot compute alpha (division by zero). Stopping.\n";
-                break;
+                return false;
             }
 
             alpha = rho / vr0;
@@ -73,14 +73,14 @@ namespace LINEQSOLVERS {
             GLOBAL::scalar tt = blaze::dot(t, t);
             if (tt <= 0.0) {
                 std::cerr << "BiCGSTAB breakdown: t·t <= 0 → (tt must be positive). Stopping iterations.\n";
-                break;
+                return false;
             }
 
             omega = blaze::dot(t, s) / tt;
             if (std::fabs(omega) < 1e-30) {
                 std::cerr << "BiCGSTAB breakdown: omega ≈ 0 (|omega|=" << std::fabs(omega)
                           << ") → division by omega would be unstable. Stopping iterations.\n";
-                break;
+                return false;
             }
 
             x = x + alpha * p + omega * s;
@@ -95,10 +95,12 @@ namespace LINEQSOLVERS {
             ++it;
         }
 
-        if (rel_res <= tolerance)
+        if (rel_res <= tolerance) {
             std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations\n";
-        else
-            std::cerr << "Bi_CG_STAB_sparse NOT converged (iters=" << it << ", rel res=" << rel_res << ").\n";
+            return true;
+        }
+        std::cerr << "Bi_CG_STAB_sparse NOT converged (iters=" << it << ", rel res=" << rel_res << ").\n";
+        return false;
     }
 
 

@@ -63,7 +63,7 @@ namespace LINEQSOLVERS {
         return true;
     }
 
-    void solve_GaussSeidel(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter){
+    bool solve_GaussSeidel(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter){
 
         auto n = A.rows();
         KERNEL::vector x_old = x;
@@ -96,9 +96,10 @@ namespace LINEQSOLVERS {
             if( blaze::norm( x - x_old ) < tolerance )
             {
                 std::cout << "Gauss-Seidel solver converged after " << k << " iterations." << std::endl;
-                break;
+                return true;
             }
             x_old = x;
         }
+        return false;
     }
 }
