@@ -52,8 +52,7 @@ namespace LINEQSOLVERS {
         GLOBAL::scalar rho  = blaze::dot(r0, r0);
         GLOBAL::scalar alpha = 0.0, omega = 0.0, rho1 = 0.0, beta = 0.0;
 
-        GLOBAL::scalar norm_res = blaze::norm(r0);
-        GLOBAL::scalar rel_res  = norm_res ;
+        GLOBAL::scalar rel_res  = blaze::norm(r0) ;
 
         std::size_t it = 0;
         while (rel_res > tolerance && it < maxIter)
@@ -92,8 +91,7 @@ namespace LINEQSOLVERS {
             p = r + beta * (p - omega * v);
             rho = rho1;
 
-            norm_res = blaze::norm(r);
-            rel_res  = norm_res;
+            rel_res  = blaze::norm(r);
             ++it;
         }
 
