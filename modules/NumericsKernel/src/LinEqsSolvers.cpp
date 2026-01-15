@@ -16,7 +16,7 @@ namespace LINEQSOLVERS {
         return rho;
     }
 
-    bool solve_Jacobi(const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter)
+    void solve_Jacobi(const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter)
     {
         auto rows = A.rows();
         KERNEL::vector x_old = x;
@@ -57,13 +57,12 @@ namespace LINEQSOLVERS {
         }
         if ( k >= maxIter)
         {
-            std::cerr<<"Jacobi solver did not converge within "<<  std::to_string(maxIter)<<" iterations."<<std::endl;
-            return false;
+            auto message = "Jacobi solver did not converge within " +  std::to_string(maxIter) + " iterations.";
+            throw std::runtime_error(message);
         }
-        return true;
     }
 
-    bool solve_GaussSeidel(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter){
+    void solve_GaussSeidel(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter){
 
         auto n = A.rows();
         KERNEL::vector x_old = x;
@@ -96,10 +95,11 @@ namespace LINEQSOLVERS {
             if( blaze::norm( x - x_old ) < tolerance )
             {
                 std::cout << "Gauss-Seidel solver converged after " << k << " iterations." << std::endl;
-                return true;
+                return;
             }
             x_old = x;
         }
-        return false;
+        auto message = "Jacobi solver did not converge within " +  std::to_string(maxIter) + " iterations.";
+        throw std::runtime_error("Fatal error in solver: " + message);
     }
 }

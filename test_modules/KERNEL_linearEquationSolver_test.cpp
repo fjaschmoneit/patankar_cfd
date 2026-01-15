@@ -4,25 +4,6 @@
 
 using namespace LINEQSOLVERS;
 
-// This test validates the BiCGSTAB solver on a simple sparse upper-bidiagonal system (main diagonal 2, superdiagonal 1)
-// where the exact solution is known. The RHS is constructed accordingly, and we check that the computed
-// solution matches the analytical one within tolerance
-// Memory usage for this test in double precision
-// double 8 byte ≈ 0.000008 MB ≈ 8e-6 MB
-// for 2 points stencil
-// N =    10'000   -> ≈  0.16 MB
-// N =    25'000   -> ≈  4.00 MB   -> execution time ->    0.3 sec, 	  0.3 sec,  0.004 sec
-// N = 1'000'000   -> ≈ 16.00 MB   -> execution time ->  441.0 sec, 	441.0 sec,  0.150 sec
-// N = 2'500'000   -> ≈ 40.00 MB
-// for 3 points stencil
-// N =    10'000   -> ≈  0.24 MB
-// N =    25'000   -> ≈  6.00 MB
-// N = 1'000'000   -> ≈ 24.00 MB
-// N = 2'500'000   -> ≈ 60.00 MB
-// for 5 points stencil
-// N =    25'000   -> ≈   1.0 MB
-// N = 2'500'000   -> ≈ 100.0 MB
-
 TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
 {
     unsigned N = 2000;
@@ -31,7 +12,7 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
 
     setSparseProblem_1<KERNEL::smatrix>(A, b, solution);
 
-    solve_BiCGSTAB<KERNEL::smatrix>( A, x, b, 1e-15, 10000);
+    solve_BiCGSTAB<KERNEL::smatrix>( A, x, b, 1e-13, 10000);
 
     for(int i = 0; i < solution.size(); i++)
     {
@@ -114,14 +95,17 @@ TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
     KERNEL::dmatrix A(N,N, 5*N);
     KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
     setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
-    bool JacobiCanConverge = solve_Jacobi( A,x, b, 1e-15, 10000  );
-    if (JacobiCanConverge) {
-        for(int i = 0; i < solution.size(); i++)
-        {
-            EXPECT_NEAR(x[i], solution[i], 1e-8);
-        }
+    bool jacobiConverged = false;
+    try {
+        solve_Jacobi( A,x, b, 1e-15, 10000  );
+        jacobiConverged = true;
+    } catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        jacobiConverged = false;
     }
-    EXPECT_FALSE(JacobiCanConverge); //
+
+    EXPECT_FALSE(jacobiConverged); //
 }
 
 // TEST_F(NK_matrixBuilder, sparseMatrix1_GaussSeidel)

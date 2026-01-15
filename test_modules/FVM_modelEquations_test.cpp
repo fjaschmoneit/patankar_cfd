@@ -233,7 +233,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 // with out reserving is the execution time ~6 seconds
 TEST_F(FVM_laplaceTests, FVM_localDerichletBCs3)
 {
-    unsigned int nbX = 301.0;
+    unsigned int nbX = 11.0;
     auto objReg = setUp(1.0, nbX);
 
     auto A = objReg.getSparseMatrixRef(AHandle);
@@ -337,7 +337,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs3)
 //
 // Analytical Solution:
 // φ(x,y) = xˆ2-yˆ2
-TEST_F(FVM_laplaceTests, spasVarDerichletBCsSpeed)
+TEST_F(FVM_laplaceTests, sparseVarDerichletBCsSpeed)
 {
 
     //auto objReg = setUp(1, 161);

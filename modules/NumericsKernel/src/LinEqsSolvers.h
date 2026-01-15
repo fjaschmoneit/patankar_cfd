@@ -34,14 +34,14 @@ void checkLinEqSystemConsistency(const MatrixType& A, const KERNEL::vector& b) {
 namespace LINEQSOLVERS {
 
     // A must be strictly diagonal dominant
-    bool solve_GaussSeidel( const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
+    void solve_GaussSeidel( const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
 
-    bool solve_Jacobi(      const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
+    void solve_Jacobi(      const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
 
     // todo BiCGSTAB is not working with single precisition problem, is have converge problems. We need to figure out why.
     // free template class I cannot separate definition from implementation. That leads to linking error.
     template<typename MatrixType>
-    bool solve_BiCGSTAB(const MatrixType &A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter) {
+    void solve_BiCGSTAB(const MatrixType &A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter) {
 
         const std::size_t n = A.rows();
         KERNEL::vector r0( b - A * x );
@@ -61,8 +61,8 @@ namespace LINEQSOLVERS {
             GLOBAL::scalar vr0 = blaze::dot(v, r0);
             if (std::fabs(vr0) < 1e-30)
             {
-                std::cerr << "BiCGSTAB breakdown: v·r0 ≈ 0 → cannot compute alpha (division by zero). Stopping.\n";
-                return false;
+                auto message = std::string("BiCGSTAB breakdown: v·r0 ≈ 0 → cannot compute alpha (division by zero). Stopping.");
+                throw std::runtime_error("Fatal error in BiCGSTAB solver: " + message);
             }
 
             alpha = rho / vr0;
@@ -71,16 +71,18 @@ namespace LINEQSOLVERS {
             t = A * s;
 
             GLOBAL::scalar tt = blaze::dot(t, t);
-            if (tt <= 0.0) {
-                std::cerr << "BiCGSTAB breakdown: t·t <= 0 → (tt must be positive). Stopping iterations.\n";
-                return false;
+            if (tt <= 0.0)
+            {
+                auto message = std::string("BiCGSTAB breakdown: t·t <= 0 → (tt must be positive). Stopping iterations.");
+                throw std::runtime_error("Fatal error in BiCGSTAB solver: " + message);
             }
 
             omega = blaze::dot(t, s) / tt;
-            if (std::fabs(omega) < 1e-30) {
-                std::cerr << "BiCGSTAB breakdown: omega ≈ 0 (|omega|=" << std::fabs(omega)
-                          << ") → division by omega would be unstable. Stopping iterations.\n";
-                return false;
+            if (std::fabs(omega) < 1e-30)
+            {
+                auto message ="BiCGSTAB breakdown: omega ≈ 0 (|omega|=" + std::to_string(std::fabs(omega))
+                          + ") → division by omega would be unstable. Stopping iterations.\n";
+                throw std::runtime_error("Fatal error in BiCGSTAB solver: " + message);
             }
 
             x = x + alpha * p + omega * s;
@@ -95,12 +97,13 @@ namespace LINEQSOLVERS {
             ++it;
         }
 
-        if (rel_res <= tolerance) {
+        if (rel_res <= tolerance)
+        {
             std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations\n";
-            return true;
+            return;
         }
-        std::cerr << "Bi_CG_STAB_sparse NOT converged (iters=" << it << ", rel res=" << rel_res << ").\n";
-        return false;
+        auto message = std::string("Bi_CG_STAB_sparse NOT converged (iters=" + std::to_string(it) + ", rel res=" + std::to_string(rel_res) + ")");
+        throw std::runtime_error("Fatal error in BiCGSTAB solver: " + message);
     }
 
 
