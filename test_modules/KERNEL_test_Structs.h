@@ -1,10 +1,6 @@
 
-
-struct NK_matrixBuilder : public::testing::Test {
-
-    KERNEL::scalar tolerance = 1e-15;
-    unsigned int maxIter = 100000;
-
+struct NK_matrixBuilder : public::testing::Test
+{
     //    ( 2 1 0 0 0 0 )    ( x_0 )       (1)
     //    ( 0 2 1 0 0 0 )    ( x_1 )       (2)
     //    ( 0 0 2 1 0 0 )    ( x_2 )       (1)
@@ -88,5 +84,4 @@ struct NK_matrixBuilder : public::testing::Test {
         std::iota(b.begin(), b.end(), 1+Q);
         std::iota(solution.begin(), solution.end(), 1.0);
     }
-
 };

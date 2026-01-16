@@ -1,9 +1,7 @@
 #include <gtest/gtest.h>
 #include "KERNEL.h"
 #include <numeric>
-#include "../../NumericsKernel/src/LinEqsSolvers.h"
-#include "blaze/Blaze.h"
-
+#include "Util.h"
 
 struct kernelInterface : public ::testing::Test {
 };
@@ -47,7 +45,7 @@ struct FVM_laplaceTests : public ::testing::Test {
     std::vector<unsigned int> cellIndices_East;
     std::vector<unsigned int> cellIndices_West;
 
-    KERNEL::ObjectRegistry setUp(KERNEL::scalar length, unsigned int nbX)
+    KERNEL::ObjectRegistry setUp(GLOBAL::scalar length, unsigned int nbX)
     {
         if (nbX%2 == 0)
             throw std::runtime_error("ERROR: nx must be uneven");
@@ -113,9 +111,7 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
         ae[i] = 2.0;
     }
 
-    auto correctResult = *KERNEL::newTempVector(b.size());
-    std::iota(correctResult.begin(),correctResult.end(),1);
-
+    auto correctResult = *KERNEL::vector(b.size());
     b = A*correctResult;
 
     // an educated guess for u:
@@ -133,11 +129,11 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
 // 2D Laplace Equation with local BCs
 //
 // Problem Setup:
-// - Domain: 0 ≤ x ≤ 1, 0 ≤ y ≤ 1 (rectangular)
+// - Domain: 0 ≤ x ≤ lx, 0 ≤ y ≤ ly (rectangular)
 // - ODE: ∇²φ = 0
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,1) = x,  φ(1,y) = y
+// - Dirichlet: φ(x,0) = 0, φ(0,y) = 0, φ(x,ly) = x*ly,  φ(lx,y) = y*lx
 //
 // Analytical Solution:
 // φ(x,y) = y*x
@@ -230,107 +226,221 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
     }
 }
 
+// This test work directly on Blaze band views.
+// This implementation is quite fast: ~3 s runtime for a 301×301 system in a Release build.
+// Reserving memory for the sparse matrix takes ~2.5 seconds, but once reserved the matrix assembly itself
+// takes only ~2 ms (when reusing the same A matrix is possible).
+// with out reserving is the execution time ~6 seconds
+TEST_F(FVM_laplaceTests, FVM_localDerichletBCs3)
+{
+    unsigned int nbX = 11.0;
+    auto objReg = setUp(1.0, nbX);
 
+    auto A = objReg.getSparseMatrixRef(AHandle);
+    auto u = objReg.getVectorRef(uHandle);
+    auto b = objReg.getVectorRef(bHandle);
+
+    auto ap = blaze::band(A,0);
+    auto ae = blaze::band(A,1);
+    auto aw = blaze::band(A,-1);
+    auto as = blaze::band(A,nx);
+    auto an = blaze::band(A,static_cast<int>(-nx));
+
+    // reserve in sparse matrix.
+    A.reserve(nbCells * 5);
+    for (std::size_t r = 0; r < nbCells; ++r) A.reserve(r, 5);
+
+    // Collect A
+    const GLOBAL::scalar pVal = -4.0 * faceArea / cellSpacing;
+    const GLOBAL::scalar fVal =  1.0 * faceArea / cellSpacing;
+
+    //Main Diagonal
+    for (size_t i = 0; i < ap.size(); ++i) {ap[i] = pVal;}
+    for (auto p : cellIndices_West)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_East)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_North) {ap[p] -= fVal;}
+    for (auto p : cellIndices_South) {ap[p] -= fVal;}
+
+    //East diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){ae[i]   = fVal;}
+    for (size_t i = 0; i < cellIndices_East.size()-1; ++i){ae[cellIndices_East[i]]   = 0.0;}
+
+    //West diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){aw[i]   = fVal;}
+    for (size_t i = 1; i < cellIndices_West.size(); ++i) {aw[cellIndices_West[i]-1]   = 0.0;}
+
+    //South
+    for (size_t i = 0; i < ap.size()-nx; ++i){as[i]   = fVal;}
+
+    //North
+    for (size_t i = 0; i < ap.size()-nx; ++i){an[i]   = fVal;}
+    // Collect b for Dirichlet boundaries
+    const GLOBAL::scalar bVal = 2.0 * faceArea / cellSpacing;
+
+    // NORTH
+    GLOBAL::scalar ypos = leny;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
+    }
+
+    // SOUTH
+    ypos = 0.0;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = (ny-1) * nx + i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
+    }
+
+    // EAST
+    GLOBAL::scalar xpos = lenx;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx + (nx-1);
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
+    }
+
+    // WEST
+    xpos = 0.0;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx;
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * xpos * ypos;
+    }
+    KERNEL::solve(A, u, b, 1e-15, 100000, KERNEL::BiCGSTAB);
+
+    // theoretical solution, vertical mid-line at x = lenx/2
+    KERNEL::vector solution( nx, 0.0 );
+    for (unsigned int i=0; i < nx; i++) {
+        auto x = 0.5*lenx;
+        auto y = leny - ( 0.5 + i )*cellSpacing;
+        solution[i] = x*y;
+    }
+
+    for(int i = 0; i < solution.size(); i++)
+    {
+        auto j = nx/2 + nx*i;
+        EXPECT_NEAR(u[j], solution[i],tolerance);
+    }
+}
 
 
 // 2D Laplace Equation with spacially varying BCs
 //
 // Problem Setup:
-// - Domain: 0 ≤ x ≤ 1, 0 ≤ y ≤ 1 (rectangular)
+// - Domain: 0 ≤ x ≤ lx, 0 ≤ y ≤ ly (rectangular)
 // - ODE: ∇²φ = 0
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = xˆ2 , φ(0,y) = -yˆ2, φ(x,1) = xˆ2-1,  φ(1,y) = 1-yˆ2
+// - Dirichlet: φ(x,0) = xˆ2 , φ(0,y) = -yˆ2, φ(x,ly) = xˆ2-ly^2,  φ(lx,y) = lx^2-yˆ2
 //
 // Analytical Solution:
 // φ(x,y) = xˆ2-yˆ2
-//TEST_F(FVM_laplaceTests, spacVarDerichletBCs) {
-    // setUp(51);
-    //
-    // // ---------  solve problem and write solution in 'field' container ------------
-    // auto xpos = [&](size_t index)
-    // {
-    //     return -dx/2 + static_cast<GLOBAL::scalar>(index+1)*dx;
-    // };
-    // GLOBAL::vector b, vBoundary_Value_North, vBoundary_Value_East, vBoundary_Value_South, vBoundary_Value_West;
-    // vBoundary_Value_South.resize(nx);
-    // vBoundary_Value_North = vBoundary_Value_West = vBoundary_Value_East = vBoundary_Value_South;
-    // for (unsigned int i=0; i < nx; i++)
-    // {
-    //     vBoundary_Value_South[i] = xpos(i)*xpos(i);
-    //     vBoundary_Value_North[i] = xpos(i)*xpos(i)-1;
-    //     vBoundary_Value_West[nx-i-1]  = -xpos(i)*xpos(i);
-    //     vBoundary_Value_East[nx-i-1]  = 1-xpos(i)*xpos(i);
-    // }
-    //
-    // GLOBAL::vector ae,aw,an,as,ap,sp,su;
-    // ae.assign(nx*ny,0.0);
-    // aw = an = as = as = ap = sp = su = ae;
-    //
-    // double de,dw,ds,dn,dp;
-    // dp = de = dw = ds = dn = 0.0;
-    // auto A = 1;
-    // for (unsigned int i=0; i < nx*ny; i++)
-    // {
-    //     dp = de = dw = ds = dn = A / dx;
-    //     ae[i] = aw[i] = an[i] = as[i] = de;
-    //     sp[i] = su[i] = 0;
-    // }
-    //
-    // Sparse::BiCGSTAB linEqs(static_cast<int>(nx));
-    //
-    // apply_Boundary(vBoundary_Value_East, getFaceNumberEast(nx) ,ae,su,sp,A,dx);
-    // linEqs.setDirectionalFlux(ae,FVM::CardinalDirection::east);
-    //
-    // apply_Boundary(vBoundary_Value_West, getFaceNumberWest(nx) ,aw,su,sp,A,dx);
-    // linEqs.setDirectionalFlux(aw,FVM::CardinalDirection::west);
-    //
-    // apply_Boundary(vBoundary_Value_South,getFaceNumberSouth(nx),as,su,sp,A,dx);
-    // linEqs.setDirectionalFlux(as,FVM::CardinalDirection::south);
-    //
-    // apply_Boundary(vBoundary_Value_North,getFaceNumberNorth(nx),an,su,sp,A,dx);
-    // linEqs.setDirectionalFlux(an,FVM::CardinalDirection::north);
-    // linEqs.setDirectionalFlux(su,FVM::CardinalDirection::su);
-    //
-    // for (unsigned int i=0; i < nx*ny; i++)
-    // {
-    //     ap[i] = -(ae[i] + aw[i] + as[i] + an[i] - sp[i]);
-    // }
-    // linEqs.setDirectionalFlux(ap,FVM::CardinalDirection::centre);
-    //
-    // field = linEqs.solve();
-    //
-    // auto midHorizontalEquated = getHorizontalCenterLineValues();
-    // auto midVerticalEquated = getVerticalCenterLineValues();
-    //
-    // // theoretical solution:
-    // std::vector<double> solution( nx, 0.0 );
-    // for (unsigned int i=0; i < nx; i++) {
-    //     auto x = 0.5;
-    //     auto y = ( 0.5 + i )*dx;
-    //     solution[i] = x*x - y*y;
-    // }
-    //
-    // for(int i = 0; i < solution.size(); i++)
-    // {
-    //     EXPECT_NEAR(midVerticalEquated[i], solution[i],tolerance);
-    // }
-    // for(int i = 0; i < solution.size(); i++)
-    // {
-    //     EXPECT_NEAR(midHorizontalEquated[i], solution[solution.size()-i-1],tolerance);
-    // }
-// }
+TEST_F(FVM_laplaceTests, sparseVarDerichletBCsSpeed)
+{
+
+    //auto objReg = setUp(1, 161);
+    auto objReg = setUp(1, 161);
+
+    auto A = objReg.getSparseMatrixRef(AHandle);
+    auto u = objReg.getVectorRef(uHandle);
+    auto b = objReg.getVectorRef(bHandle);
+
+    auto ap = blaze::band(A,0);
+    auto ae = blaze::band(A,1);
+    auto aw = blaze::band(A,-1);
+    auto as = blaze::band(A,nx);
+    auto an = blaze::band(A,static_cast<int>(-nx));
+
+    // reserve in sparse matrix.
+    A.reserve(nbCells * 5);
+    for (std::size_t r = 0; r < nbCells; ++r) A.reserve(r, 5);
+
+    // Collect A
+    const GLOBAL::scalar pVal = -4.0 * faceArea / cellSpacing;
+    const GLOBAL::scalar fVal =  1.0 * faceArea / cellSpacing;
+
+    //Main Diagonal
+    for (size_t i = 0; i < ap.size(); ++i) {ap[i] = pVal;}
+    for (auto p : cellIndices_West)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_East)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_North) {ap[p] -= fVal;}
+    for (auto p : cellIndices_South) {ap[p] -= fVal;}
+
+    //East diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){ae[i]   = fVal;}
+    for (size_t i = 0; i < cellIndices_East.size()-1; ++i){ae[cellIndices_East[i]]   = 0.0;}
+
+    //West diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){aw[i]   = fVal;}
+    for (size_t i = 1; i < cellIndices_West.size(); ++i) {aw[cellIndices_West[i]-1]   = 0.0;}
+
+    //South
+    for (size_t i = 0; i < ap.size()-nx; ++i){as[i]   = fVal;}
+
+    //North
+    for (size_t i = 0; i < ap.size()-nx; ++i){an[i]   = fVal;}
+    // Collect b for Dirichlet boundaries
+    const GLOBAL::scalar bVal = 2.0 * faceArea / cellSpacing;
+
+    // NORTH
+    GLOBAL::scalar ypos = leny;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (xpos * xpos - ypos * ypos);
+    }
+
+    // SOUTH
+    ypos = 0.0;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = (ny-1) * nx + i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (xpos * xpos - ypos * ypos);
+    }
+
+    // EAST
+    GLOBAL::scalar xpos = lenx;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx + (nx-1);
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (xpos * xpos - ypos * ypos);
+    }
+
+    // WEST
+    xpos = 0.0;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx;
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (xpos * xpos - ypos * ypos);
+    }
+
+    KERNEL::solve(A, u, b, 1e-15, 2000, KERNEL::BiCGSTAB);
+    // theoretical solution, vertical mid-line at x = lenx/2
+    KERNEL::vector solution( nx, 0.0 );
+    for (unsigned int i=0; i < nx; i++) {
+        auto x = 0.5*lenx;
+        auto y = leny - ( 0.5 + i )*cellSpacing;
+        solution[i] = x*x-y*y;
+    }
+    for(int i = 0; i < solution.size(); i++)
+    {
+        auto j = nx/2 + nx*i;
+        EXPECT_NEAR(u[j], solution[i],1e-5);
+    }
+}
 
 
 // 2D Poisson Equation Test Case (Fitzpatrick Example)
 //
 // Problem Setup:
-// - Domain: 0 ≤ x ≤ 1, 0 ≤ y ≤ 1 (rectangular)
+// - Domain: 0 ≤ x ≤ lx, 0 ≤ y ≤ lx (rectangular)
 // - PDE: ∇²φ = f(x,y)
 // - Source term: f(x,y) = 6xy (1-y) - 2x^3
 //
 // Boundary Conditions:
-// - Dirichlet: φ(x,0) = φ(x,1) = 0, φ(0,y) = 0,  φ(1,y) = y(1-y)
+// - Dirichlet: φ(x,0) = φ(x,1) = 0, φ(0,y) = 0,  φ(1,y) = y(1-y) * lx^3
 //
 // Analytical Solution:
 // φ(x,y) = y*(1-y)x^3
@@ -339,5 +449,111 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
 // https://farside.ph.utexas.edu/teaching/329/lectures/node71.html
 TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
 
-    EXPECT_EQ(1,0);
+   //auto objReg = setUp(1, 161);
+    auto objReg = setUp(1, 57);
+
+    auto A = objReg.getSparseMatrixRef(AHandle);
+    auto u = objReg.getVectorRef(uHandle);
+    auto b = objReg.getVectorRef(bHandle);
+
+    auto ap = blaze::band(A,0);
+    auto ae = blaze::band(A,1);
+    auto aw = blaze::band(A,-1);
+    auto as = blaze::band(A,nx);
+    auto an = blaze::band(A,static_cast<int>(-nx));
+
+    // reserve in sparse matrix.
+    A.reserve(nbCells * 5);
+    for (std::size_t r = 0; r < nbCells; ++r) A.reserve(r, 5);
+
+    // Collect A
+    const GLOBAL::scalar pVal = -4.0 * faceArea / cellSpacing;
+    const GLOBAL::scalar fVal =  1.0 * faceArea / cellSpacing;
+
+    //Main Diagonal
+    for (size_t i = 0; i < ap.size(); ++i) {ap[i] = pVal;}
+    for (auto p : cellIndices_West)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_East)  {ap[p] -= fVal;}
+    for (auto p : cellIndices_North) {ap[p] -= fVal;}
+    for (auto p : cellIndices_South) {ap[p] -= fVal;}
+
+    //East diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){ae[i]   = fVal;}
+    for (size_t i = 0; i < cellIndices_East.size()-1; ++i){ae[cellIndices_East[i]]   = 0.0;}
+
+    //West diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){aw[i]   = fVal;}
+    for (size_t i = 1; i < cellIndices_West.size(); ++i) {aw[cellIndices_West[i]-1]   = 0.0;}
+
+    //South
+    for (size_t i = 0; i < ap.size()-nx; ++i){as[i]   = fVal;}
+
+    //North
+    for (size_t i = 0; i < ap.size()-nx; ++i){an[i]   = fVal;}
+    // Collect b for Dirichlet boundaries
+    const GLOBAL::scalar bVal = 2.0 * faceArea / cellSpacing;
+
+    // Now we have a source term, so we need to assign source values to all entries in b
+    for (unsigned int jy = 0; jy < ny; ++jy) {
+        double yP = leny - (0.5 + jy) * cellSpacing;
+
+        for (unsigned int ix = 0; ix < nx; ++ix) {
+            double xP = (0.5 + ix) * cellSpacing;
+            unsigned int P = ix + jy * nx;
+
+            double fP = 6.0 * xP * yP * (1.0 - yP) - 2.0 * xP * xP * xP;
+            double V = faceArea * cellSpacing;
+
+            b[P] += fP * V;
+        }
+    }
+
+    // NORTH
+    GLOBAL::scalar ypos = leny;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (ypos*(1-ypos)*xpos*xpos*xpos);
+    }
+
+    // SOUTH
+    ypos = 0.0;
+    for( std::size_t i = 0; i < nx; ++i ) {
+        const std::size_t p = (ny-1) * nx + i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (ypos*(1-ypos)*xpos*xpos*xpos);
+    }
+
+    // EAST
+    GLOBAL::scalar xpos = lenx;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx + (nx-1);
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (ypos*(1-ypos)*xpos*xpos*xpos);
+    }
+
+    // WEST
+    xpos = 0.0;
+    for( std::size_t i = 0; i < ny; ++i ) {
+        const std::size_t p = i * nx;
+        const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
+        b[p] -= bVal * (ypos*(1-ypos)*xpos*xpos*xpos);
+    }
+
+    //buildMatrixWithBandsSpeed( A, ae, aw, as, an,sp, ap, nx);
+    KERNEL::solve(A, u, b, 1e-15, 2000, KERNEL::BiCGSTAB);
+
+    KERNEL::vector solution( nx, 0.0 );
+    for (unsigned int i=0; i < nx; i++) {
+        auto x = 0.5*lenx;
+        auto y = leny - ( 0.5 + i )*cellSpacing;
+        solution[i] = y*(1-y)*x*x*x;
+    }
+
+    for(int i = 0; i < solution.size(); i++)
+    {
+        auto j = nx/2 + nx*i;
+
+        EXPECT_NEAR(u[j], solution[i],1e-5);
+    }
 }

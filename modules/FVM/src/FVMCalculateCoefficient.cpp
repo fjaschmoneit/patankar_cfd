@@ -35,12 +35,3 @@ void FVMCalculateCoefficient::addCoefficientsToWestEastNortOrSouth(const FVM::Ca
     }
 }
 
-void FVMCalculateCoefficient::saveAsCSV(const std::vector<double>& vec, const std::string& filename) {
-    std::ofstream file(filename);
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        file << vec[i] << "\n";
-    }
-    file.close();
-    //saveAsCSV(field,"/Users/ri03jm/Library/Mobile Documents/com~apple~CloudDocs/DropboxFolder/Peter/skole/PhD/MatlabScript/output.csv");
-}
