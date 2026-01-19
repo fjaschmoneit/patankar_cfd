@@ -18,10 +18,8 @@ namespace KERNEL {
     struct VectorHandle { size_t id; };
     struct MatrixHandle { size_t id; };
 
-    std::shared_ptr<KERNEL::vector> newTempVector(size_t size);
-
-    void solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
-    void solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
+    void solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
+    void solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
 
     class ObjectRegistry {
     private:
@@ -51,7 +49,7 @@ namespace KERNEL {
         ObjectRegistry(const ObjectRegistry&) = delete;
         ObjectRegistry& operator=(const ObjectRegistry&) = delete;
 
-        VectorHandle newVector(size_t size, double initialValue = 0.0);
+        VectorHandle newVector(size_t size, GLOBAL::scalar initialValue = 0.0);
         MatrixHandle newMatrix(size_t rows, size_t cols, bool sparse = false );
 
 

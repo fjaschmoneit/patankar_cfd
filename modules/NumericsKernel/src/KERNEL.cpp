@@ -9,7 +9,7 @@ KERNEL::ObjectRegistry::ObjectRegistry(ObjectRegistry&&) noexcept = default;
 KERNEL::ObjectRegistry& KERNEL::ObjectRegistry::operator=(ObjectRegistry&&) noexcept = default;
 
 // Vector creation
-KERNEL::VectorHandle KERNEL::ObjectRegistry::newVector(size_t size, KERNEL::scalar initialValue) {
+KERNEL::VectorHandle KERNEL::ObjectRegistry::newVector(size_t size, GLOBAL::scalar initialValue) {
     if (registryClosed_)
         throw std::runtime_error("Registry closed. New objects must be defined before closing registry.");
 
@@ -82,12 +82,7 @@ KERNEL::smatrix& KERNEL::ObjectRegistry::getSparseMatrixRef(MatrixHandle handle)
     return **matPtr;
 }
 
-std::shared_ptr<KERNEL::vector> KERNEL::newTempVector(size_t size) {
-    return std::make_shared<KERNEL::vector>(size, 0.0);
-}
-
-
-void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
+void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
 
     // static_assert( std::is_same_v<decltype(A), const KERNEL::dmatrix& >, "Error in KERNEL::solve: input matrix not dense.");
 
@@ -104,7 +99,7 @@ void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::ve
     }
 }
 
-void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const KERNEL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
+void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
 
     // static_assert( std::is_same_v<decltype(A), const KERNEL::smatrix& >, "Error in KERNEL::solve: input matrix not sparse.");
 

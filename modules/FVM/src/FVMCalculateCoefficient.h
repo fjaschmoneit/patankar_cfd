@@ -4,12 +4,11 @@
 
 #ifndef FVMCalculatedCoefficient_H
 #define FVMCalculatedCoefficient_H
-#include <TypeDefs_FVM.h>
-#include <iostream>
 #include <vector>
 #include <numeric>
 #include <ranges>
 
+#include "TypeDefs_FVM.h"
 
 struct FvmCoeffs
 {
@@ -159,7 +158,6 @@ private:
 
     void addCoefficientsToWestEastNortOrSouth(const FVM::CardinalDirection& dir, FVM::scalar& ai);
 };
-
 
 
 #endif //FVMCalculatedCoefficient_H
