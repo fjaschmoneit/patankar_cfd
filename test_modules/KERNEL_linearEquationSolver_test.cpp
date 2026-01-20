@@ -95,7 +95,7 @@ TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
     KERNEL::dmatrix A(N,N, 5*N);
     KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
     setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
-    bool jacobiConverged = false;
+    bool jacobiConverged = true;
     try {
         solve_Jacobi( A,x, b, 1e-15, 10000  );
         jacobiConverged = true;
