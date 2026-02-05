@@ -2,18 +2,43 @@
 // Created by Peter Berg Ammundsen on 20/01/2026.
 //
 #include "../include/structured2d.h"
-
+#include "KERNEL.h"
 using namespace MESH;
 
 // constructor
-structured2dRegularRectangle::structured2dRegularRectangle(GLOBAL::scalar lengthX, unsigned int nbCellsX,GLOBAL::scalar lengthY, unsigned int nbCellsY)
-: BaseMesh(lengthX, nbCellsX, lengthY, nbCellsY)
+structured2dRegularRectangle::structured2dRegularRectangle(GLOBAL::scalar lengthX, unsigned int nbCellsX,GLOBAL::scalar lengthY, unsigned int nbCellsY):
+    lenX_(lengthX),
+    lenY_(lengthY),
+    nbCellsX_(nbCellsX),
+    nbCellsY_(nbCellsY),
+    nbCells_(nbCellsX * nbCellsY)
 {
     if (nbCellsX < 2 || nbCellsY < 2)
     {
         throw std::runtime_error("Mesh dimensions must be >= 2");
     }
     init();
+}
+
+unsigned int structured2dRegularRectangle::nbCellsX() const
+{
+    return nbCellsX_;
+}
+unsigned int structured2dRegularRectangle::nbCellsY() const
+{
+    return nbCellsY_;
+}
+unsigned int structured2dRegularRectangle::nbCells()  const
+{
+    return nbCells_;
+}
+GLOBAL::scalar structured2dRegularRectangle::lenX() const
+{
+    return lenX_;
+}
+GLOBAL::scalar structured2dRegularRectangle::lenY() const
+{
+    return lenY_;
 }
 void structured2dRegularRectangle::init()
 {
@@ -92,20 +117,40 @@ const GLOBAL::scalar structured2dRegularRectangle::getCellCenterCoordinate_Y(int
     return (nbCellsY()-i -0.5) * getCellSpacing_Y() ;
 }
 
-const sCoordinates structured2dRegularRectangle::getCellFacePos(RegionID id, int cellID) const
+const std::map<int,sCoordinates>
+structured2dRegularRectangle::getCellFacesPos(RegionID id) const
 {
-    switch (id)
-    {
-        case RegionID::Boundary_bottom:
-            return sCoordinates(getCellCenterCoordinate_X(cellID),getCellCenterCoordinate_Y(cellID)-getCellSpacing_Y()*0.5);
-        case RegionID::Boundary_top:
-            return sCoordinates(getCellCenterCoordinate_X(cellID),getCellCenterCoordinate_Y(cellID)+getCellSpacing_Y()*0.5);
-        case RegionID::Boundary_left:
-            return sCoordinates(getCellCenterCoordinate_X(cellID)-getCellSpacing_X()*0.5,getCellCenterCoordinate_Y(cellID));
-        case RegionID::Boundary_right:
-            return sCoordinates(getCellCenterCoordinate_X(cellID)+getCellSpacing_X()*0.5,getCellCenterCoordinate_Y(cellID));
-        default :
-            return sCoordinates(0.0,0.0);
-    }
-}
+    std::map<int,sCoordinates> out;
 
+    for (auto cellId : region(id))
+    {
+        GLOBAL::scalar x = getCellCenterCoordinate_X(cellId);
+        GLOBAL::scalar y = getCellCenterCoordinate_Y(cellId);
+
+        switch (id)
+        {
+            case RegionID::Boundary_bottom:
+                y -= getCellSpacing_Y() * GLOBAL::scalar(0.5);
+                break;
+
+            case RegionID::Boundary_top:
+                y += getCellSpacing_Y() * GLOBAL::scalar(0.5);
+                break;
+
+            case RegionID::Boundary_left:
+                x -= getCellSpacing_X() * GLOBAL::scalar(0.5);
+                break;
+
+            case RegionID::Boundary_right:
+                x += getCellSpacing_X() * GLOBAL::scalar(0.5);
+                break;
+
+            default:
+                x = GLOBAL::scalar(0);
+                y = GLOBAL::scalar(0);
+                break;
+        }
+        out.emplace(cellId, sCoordinates(x,y));
+    }
+    return out;
+}

@@ -5,6 +5,7 @@
 #ifndef STRUCTURED2D_H
 #define STRUCTURED2D_H
 #pragma once
+#include <map>
 #include "GlobalTypeDefs.h"
 #include "BaseMesh.h"
 
@@ -41,10 +42,21 @@ namespace MESH {
         // boundaries[3] = [4,3,2,1,0]
     private:
         void fillRegion(RegionID region) override;
+        // order must follow initialization list
+        const GLOBAL::scalar lenX_;
+        const GLOBAL::scalar lenY_;
+        const unsigned int nbCellsX_;
+        const unsigned int nbCellsY_;
+        const unsigned int nbCells_;
 
     public:
         structured2dRegularRectangle(GLOBAL::scalar lengthX, unsigned int nbCellsX, GLOBAL::scalar lengthY, unsigned int nbCellsY);
         void init();
+        unsigned int nbCellsX() const;
+        unsigned int nbCellsY() const;
+        unsigned int nbCells()  const;
+        GLOBAL::scalar lenX() const;
+        GLOBAL::scalar lenY() const;
 
         const GLOBAL::scalar getCellSpacing_X( ) const;
         const GLOBAL::scalar getCellSpacing_Y( ) const;
@@ -62,7 +74,7 @@ namespace MESH {
         const GLOBAL::scalar getCellCenterCoordinate_Y(int cellId) const override;
 
         bool isBoundaryCell( unsigned int i ) const override;
-        const sCoordinates getCellFacePos(RegionID id, int cellID) const override;
+        const std::map<int,sCoordinates> getCellFacesPos(RegionID id) const override;
     };
 
 }

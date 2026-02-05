@@ -8,6 +8,7 @@
 #include <iterator>
 #include <unordered_map>
 #include "GlobalTypeDefs.h"
+#include <map>
 
 namespace MESH {
     // Enum for region identifiers
@@ -58,13 +59,6 @@ namespace MESH {
     class BaseMesh
     {
     protected:
-        // order must follow initialization list
-        const GLOBAL::scalar lenX_;
-        const GLOBAL::scalar lenY_;
-        const unsigned int nbCellsX_;
-        const unsigned int nbCellsY_;
-        const unsigned int nbCells_;
-
         // Registry of all regions; enum class ensures type safety
         std::unordered_map<RegionID, Region> regions;
 
@@ -72,17 +66,9 @@ namespace MESH {
         virtual void fillRegion(RegionID region) = 0;
 
     public:
-        BaseMesh(GLOBAL::scalar lengthX, unsigned int nbCellsX, GLOBAL::scalar lengthY, unsigned int nbCellsY);
+        BaseMesh();
 
         virtual ~BaseMesh() = default;
-
-        unsigned int nbCellsX() const;
-        unsigned int nbCellsY() const;
-        unsigned int nbCells()  const;
-
-
-        GLOBAL::scalar lenX() const;
-        GLOBAL::scalar lenY() const;
 
         const Region& region(RegionID id) const;
         GLOBAL::scalar cellThickness = 1;
@@ -91,7 +77,7 @@ namespace MESH {
         virtual const GLOBAL::scalar getCellCenterCoordinate_Y(int cellId) const = 0;
 
         virtual bool isBoundaryCell( unsigned int i ) const = 0;
-        virtual const sCoordinates getCellFacePos(RegionID id, int cellID) const = 0;
+        virtual const std::map<int,sCoordinates>  getCellFacesPos(RegionID id) const = 0;
     };
 }
 

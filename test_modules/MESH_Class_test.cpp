@@ -92,19 +92,6 @@ TEST_F(MESHInterface, interfaceTest1)
     EXPECT_EQ(mesh.getCellFaceAreal_X() , faceAreaX);
     EXPECT_EQ(mesh.getCellFaceAreal_Y() , faceAreaY);
 
-    auto CellCoor_Left = mesh.getCellFacePos(MESH::RegionID::Boundary_left,0);
-    EXPECT_EQ(CellCoor_Left.x , 0);
-    EXPECT_EQ(CellCoor_Left.y , firstYCenterPosition );
-    auto CellCoor_Rgiht = mesh.getCellFacePos(MESH::RegionID::Boundary_right,0);
-    EXPECT_EQ(CellCoor_Rgiht.x , dx);
-    EXPECT_EQ(CellCoor_Rgiht.y , firstYCenterPosition );
-    auto CellCoor_Top = mesh.getCellFacePos(MESH::RegionID::Boundary_top,0);
-    EXPECT_NEAR(CellCoor_Top.x , 0.5*dx         , 1e-10);
-    EXPECT_NEAR(CellCoor_Top.y , lengthY        , 1e-10);
-    auto CellCoor_Botton = mesh.getCellFacePos(MESH::RegionID::Boundary_bottom,0);
-    EXPECT_NEAR(CellCoor_Botton.x , 0.5*dx      , 1e-10);
-    EXPECT_NEAR(CellCoor_Botton.y , lengthY-dy  , 1e-10 );
-
     EXPECT_NEAR(mesh.getCellReciprocalSpacing_X() , 1/dx , 1e-10);
     EXPECT_NEAR(mesh.getCellReciprocalSpacing_Y() , 1/dy   , 1e-10);
 
@@ -125,6 +112,17 @@ TEST_F(MESHInterface, interfaceTest1)
             EXPECT_TRUE(isCellIdFound);
             EXPECT_TRUE(mesh.isBoundaryCell(cellId));
         }
+        //checking getCellFacePos function
+        for (const auto& [cellId, pos] : mesh.getCellFacesPos(MESH::RegionID::Boundary_top))
+        {
+            GLOBAL::scalar x = cellId * dx + 0.5*dx;
+            GLOBAL::scalar y = lengthY;
+            bool isCellIdFound = std::ranges::find(NorthBoundaryCellNumber, cellId) != NorthBoundaryCellNumber.end();
+            EXPECT_TRUE(isCellIdFound);
+            EXPECT_TRUE(mesh.isBoundaryCell(cellId));
+            EXPECT_DOUBLE_EQ(pos.x,x);
+            EXPECT_DOUBLE_EQ(pos.y,y);
+        }
     }
     //checking boundary bottom cells
     {
@@ -133,6 +131,17 @@ TEST_F(MESHInterface, interfaceTest1)
             bool isCellIdFound = std::ranges::find(SouthBoundaryCellNumber, cellId) != SouthBoundaryCellNumber.end();
             EXPECT_TRUE(isCellIdFound);
             EXPECT_TRUE(mesh.isBoundaryCell(cellId));
+        }
+        //checking getCellFacePos function
+        for (const auto& [cellId, pos] : mesh.getCellFacesPos(MESH::RegionID::Boundary_bottom))
+        {
+            GLOBAL::scalar x =   (cellId - (nbcellsX*nbcellsY) + nbcellsX) * dx + 0.5*dx;
+            GLOBAL::scalar y = 0;
+            bool isCellIdFound = std::ranges::find(SouthBoundaryCellNumber, cellId) != SouthBoundaryCellNumber.end();
+            EXPECT_TRUE(isCellIdFound);
+            EXPECT_TRUE(mesh.isBoundaryCell(cellId));
+            EXPECT_DOUBLE_EQ(pos.x,x);
+            EXPECT_DOUBLE_EQ(pos.y,y);
         }
     }
     //checking boundary left cells
@@ -143,6 +152,17 @@ TEST_F(MESHInterface, interfaceTest1)
             EXPECT_TRUE(isCellIdFound);
             EXPECT_TRUE(mesh.isBoundaryCell(cellId));
         }
+        //checking getCellFacePos function
+        for (const auto& [cellId, pos] : mesh.getCellFacesPos(MESH::RegionID::Boundary_left))
+        {
+            GLOBAL::scalar x = 0;
+            GLOBAL::scalar y = lengthY-0.5*dy-dy*cellId / nbcellsX;
+            bool isCellIdFound = std::ranges::find(WestBoundaryCellNumber, cellId) != WestBoundaryCellNumber.end();
+            EXPECT_TRUE(isCellIdFound);
+            EXPECT_TRUE(mesh.isBoundaryCell(cellId));
+            EXPECT_FLOAT_EQ(pos.x , x);
+            EXPECT_FLOAT_EQ(pos.y , y);
+        }
     }
     //checking boundary right cells
     {
@@ -151,6 +171,17 @@ TEST_F(MESHInterface, interfaceTest1)
             bool isCellIdFound = std::ranges::find(EastBoundaryCellNumber, cellId) != EastBoundaryCellNumber.end();
             EXPECT_TRUE(isCellIdFound);
             EXPECT_TRUE(mesh.isBoundaryCell(cellId));
+        }
+        //checking getCellFacePos function
+        for (const auto& [cellId, pos] : mesh.getCellFacesPos(MESH::RegionID::Boundary_right))
+        {
+            GLOBAL::scalar x =  lengthX;
+            GLOBAL::scalar y = lengthY-0.5*dy-dy*((cellId-nbcellsX+1)/nbcellsX);
+            bool isCellIdFound = std::ranges::find(EastBoundaryCellNumber, cellId) != EastBoundaryCellNumber.end();
+            EXPECT_TRUE(isCellIdFound);
+            EXPECT_TRUE(mesh.isBoundaryCell(cellId));
+            EXPECT_FLOAT_EQ(pos.x , x);
+            EXPECT_FLOAT_EQ(pos.y ,y);
         }
     }
 }

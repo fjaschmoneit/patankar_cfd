@@ -14,7 +14,7 @@ add_executable(
         FVM_modelEquations_test.cpp
         KERNEL_linearEquationSolver_test.cpp
         KERNEL_performance_test.cpp
-        MESH_modelEquations_test.cpp
+        MESH_Class_test.cpp
 )
 include_directories(/usr/local/include)
 
