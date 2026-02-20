@@ -67,14 +67,14 @@ namespace MESH {
         const GLOBAL::scalar getCellReciprocalSpacing_X( ) const;
         const GLOBAL::scalar getCellReciprocalSpacing_Y( ) const;
         const GLOBAL::scalar getCellFaceAreal_Y( ) const;
-        const GLOBAL::scalar getCellFaceAreal_X( ) const;
+        const GLOBAL::scalar getCellFaceArea_X( ) const;
 
         //virtual functions
         const GLOBAL::scalar getCellCenterCoordinate_X(int cellId) const override;
         const GLOBAL::scalar getCellCenterCoordinate_Y(int cellId) const override;
 
         bool isBoundaryCell( unsigned int i ) const override;
-        const std::map<int,sCoordinates> getCellFacesPos(RegionID id) const override;
+        const std::map<int,Coordinate> getCellFacesPos(RegionID id) const override;
     };
 
 }

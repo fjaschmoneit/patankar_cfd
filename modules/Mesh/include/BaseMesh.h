@@ -20,12 +20,12 @@ namespace MESH {
         Boundary_top
     };
 
-    struct sCoordinates
+    struct Coordinate
     {
         GLOBAL::scalar x = 0.0;
         GLOBAL::scalar y = 0.0;
 
-        sCoordinates(GLOBAL::scalar _x, GLOBAL::scalar _y): x(_x), y(_y){}
+        Coordinate(GLOBAL::scalar _x, GLOBAL::scalar _y): x(_x), y(_y){}
     };
 
     struct Region {
@@ -77,7 +77,7 @@ namespace MESH {
         virtual const GLOBAL::scalar getCellCenterCoordinate_Y(int cellId) const = 0;
 
         virtual bool isBoundaryCell( unsigned int i ) const = 0;
-        virtual const std::map<int,sCoordinates>  getCellFacesPos(RegionID id) const = 0;
+        virtual const std::map<int,Coordinate>  getCellFacesPos(RegionID id) const = 0;
     };
 }
 

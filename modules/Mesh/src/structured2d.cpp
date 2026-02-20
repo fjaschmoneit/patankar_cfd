@@ -101,7 +101,7 @@ const GLOBAL::scalar structured2dRegularRectangle::getCellFaceAreal_Y( ) const
     return getCellSpacing_Y()*cellThickness;
 }
 
-const GLOBAL::scalar structured2dRegularRectangle::getCellFaceAreal_X( ) const
+const GLOBAL::scalar structured2dRegularRectangle::getCellFaceArea_X( ) const
 {
     return getCellSpacing_X()*cellThickness;
 }
@@ -117,10 +117,10 @@ const GLOBAL::scalar structured2dRegularRectangle::getCellCenterCoordinate_Y(int
     return (nbCellsY()-i -0.5) * getCellSpacing_Y() ;
 }
 
-const std::map<int,sCoordinates>
+const std::map<int,Coordinate>
 structured2dRegularRectangle::getCellFacesPos(RegionID id) const
 {
-    std::map<int,sCoordinates> out;
+    std::map<int,Coordinate> out;
 
     for (auto cellId : region(id))
     {
@@ -150,7 +150,7 @@ structured2dRegularRectangle::getCellFacesPos(RegionID id) const
                 y = GLOBAL::scalar(0);
                 break;
         }
-        out.emplace(cellId, sCoordinates(x,y));
+        out.emplace(cellId, Coordinate(x,y));
     }
     return out;
 }

@@ -89,7 +89,7 @@ TEST_F(MESHInterface, interfaceTest1)
     EXPECT_EQ(mesh.getCellSpacing_X() , dx);
     EXPECT_EQ(mesh.getCellSpacing_Y() , dy);
 
-    EXPECT_EQ(mesh.getCellFaceAreal_X() , faceAreaX);
+    EXPECT_EQ(mesh.getCellFaceArea_X() , faceAreaX);
     EXPECT_EQ(mesh.getCellFaceAreal_Y() , faceAreaY);
 
     EXPECT_NEAR(mesh.getCellReciprocalSpacing_X() , 1/dx , 1e-10);
