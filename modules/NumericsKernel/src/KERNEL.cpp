@@ -8,6 +8,16 @@ KERNEL::ObjectRegistry::~ObjectRegistry() = default;
 KERNEL::ObjectRegistry::ObjectRegistry(ObjectRegistry&&) noexcept = default;
 KERNEL::ObjectRegistry& KERNEL::ObjectRegistry::operator=(ObjectRegistry&&) noexcept = default;
 
+template<typename MT>
+bool checkMatrixTypeIsSparse(const MT& A)
+{
+    if constexpr (blaze::IsSparseMatrix_v<MT>)
+    {
+        return true;
+    }
+    return false;
+}
+
 // Vector creation
 KERNEL::VectorHandle KERNEL::ObjectRegistry::newVector(size_t size, GLOBAL::scalar initialValue) {
     if (registryClosed_)
@@ -107,6 +117,11 @@ void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::ve
 
     if (method == BiCGSTAB) {
         LINEQSOLVERS::solve_BiCGSTAB(A, x, b, tolerance, maxIter);
+    }
+
+    if (checkMatrixTypeIsSparse(A))
+    {
+        std::cerr<<"WARNING: Sparse matrix has been implicitly converted to a dense matrix."<<std::endl;
     }
 
 }
