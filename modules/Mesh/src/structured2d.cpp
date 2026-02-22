@@ -96,7 +96,7 @@ const GLOBAL::scalar structured2dRegularRectangle::getCellReciprocalSpacing_Y( )
     return static_cast<GLOBAL::scalar>(nbCellsY_)/lenY_;
 }
 
-const GLOBAL::scalar structured2dRegularRectangle::getCellFaceAreal_Y( ) const
+const GLOBAL::scalar structured2dRegularRectangle::getCellFaceArea_Y( ) const
 {
     return getCellSpacing_Y()*cellThickness;
 }

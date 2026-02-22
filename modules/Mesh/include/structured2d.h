@@ -66,7 +66,7 @@ namespace MESH {
         // should accept iterator to mesh cell
         const GLOBAL::scalar getCellReciprocalSpacing_X( ) const;
         const GLOBAL::scalar getCellReciprocalSpacing_Y( ) const;
-        const GLOBAL::scalar getCellFaceAreal_Y( ) const;
+        const GLOBAL::scalar getCellFaceArea_Y( ) const;
         const GLOBAL::scalar getCellFaceArea_X( ) const;
 
         //virtual functions
