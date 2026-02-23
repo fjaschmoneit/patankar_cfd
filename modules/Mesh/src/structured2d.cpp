@@ -1,0 +1,156 @@
+//
+// Created by Peter Berg Ammundsen on 20/01/2026.
+//
+#include "../include/structured2d.h"
+#include "KERNEL.h"
+using namespace MESH;
+
+// constructor
+structured2dRegularRectangle::structured2dRegularRectangle(GLOBAL::scalar lengthX, unsigned int nbCellsX,GLOBAL::scalar lengthY, unsigned int nbCellsY):
+    lenX_(lengthX),
+    lenY_(lengthY),
+    nbCellsX_(nbCellsX),
+    nbCellsY_(nbCellsY),
+    nbCells_(nbCellsX * nbCellsY)
+{
+    if (nbCellsX < 2 || nbCellsY < 2)
+    {
+        throw std::runtime_error("Mesh dimensions must be >= 2");
+    }
+    init();
+}
+
+unsigned int structured2dRegularRectangle::nbCellsX() const
+{
+    return nbCellsX_;
+}
+unsigned int structured2dRegularRectangle::nbCellsY() const
+{
+    return nbCellsY_;
+}
+unsigned int structured2dRegularRectangle::nbCells()  const
+{
+    return nbCells_;
+}
+GLOBAL::scalar structured2dRegularRectangle::lenX() const
+{
+    return lenX_;
+}
+GLOBAL::scalar structured2dRegularRectangle::lenY() const
+{
+    return lenY_;
+}
+void structured2dRegularRectangle::init()
+{
+    // Initialize boundaries container with 4 sides for a rectangle: 0=bottom,1=left,2=top,3=right
+    fillRegion( RegionID::Entire );
+    fillRegion( RegionID::Boundary_bottom );
+    fillRegion( RegionID::Boundary_top );
+    fillRegion( RegionID::Boundary_left );
+    fillRegion( RegionID::Boundary_right );
+}
+
+// MESH::region::iterator
+void structured2dRegularRectangle::fillRegion(RegionID id) {
+    int nbX = static_cast<int>(nbCellsX_);
+    int nbY = static_cast<int>(nbCellsY_);
+    int nbXY = static_cast<int>(nbCells_);
+
+    if (id == RegionID::Entire ) {
+        regions[id] = Region{
+            0,       // start
+            1,       // step
+            nbXY     // count
+        };
+    }else if ( id == RegionID::Boundary_left )
+        regions[id] = Region{0,nbX,nbY  };
+    else if ( id == RegionID::Boundary_bottom )
+        regions[id] = Region{nbX*(nbY-1),1,nbX  };
+    else if ( id == RegionID::Boundary_right )
+        regions[id] = Region{nbX-1 +(nbY-1)*nbX,-nbX,nbY  };
+    else if ( id == RegionID::Boundary_top )
+        regions[id] = Region{nbX-1,-1,nbX  };
+}
+
+bool structured2dRegularRectangle::isBoundaryCell( unsigned int cell ) const {
+        unsigned int i = cell % nbCellsX();
+        unsigned int j = cell / nbCellsX();
+        return i == 0 || i == nbCellsX() - 1 || j == 0 || j == nbCellsY() - 1;
+}
+const GLOBAL::scalar structured2dRegularRectangle::getCellSpacing_X( ) const
+{
+    return lenX_/static_cast<GLOBAL::scalar>(nbCellsX_);
+}
+const GLOBAL::scalar structured2dRegularRectangle::getCellSpacing_Y( ) const
+{
+    return lenY_/static_cast<GLOBAL::scalar>(nbCellsY_);
+}
+
+const GLOBAL::scalar structured2dRegularRectangle::getCellReciprocalSpacing_X( ) const
+{
+    return static_cast<GLOBAL::scalar>(nbCellsX_)/lenX_;
+}
+
+const GLOBAL::scalar structured2dRegularRectangle::getCellReciprocalSpacing_Y( ) const
+{
+    return static_cast<GLOBAL::scalar>(nbCellsY_)/lenY_;
+}
+
+const GLOBAL::scalar structured2dRegularRectangle::getCellFaceArea_Y( ) const
+{
+    return getCellSpacing_Y()*cellThickness;
+}
+
+const GLOBAL::scalar structured2dRegularRectangle::getCellFaceArea_X( ) const
+{
+    return getCellSpacing_X()*cellThickness;
+}
+
+const GLOBAL::scalar structured2dRegularRectangle::getCellCenterCoordinate_X(int cellId) const{
+    unsigned int i = cellId % nbCellsX_;
+    // Cell-centered coordinates: offset by +0.5 cell widths
+    return (GLOBAL::scalar( i) + GLOBAL::scalar(0.5)) * getCellSpacing_X();;
+}
+
+const GLOBAL::scalar structured2dRegularRectangle::getCellCenterCoordinate_Y(int cellId) const{
+    int i = cellId / nbCellsX_;
+    return (nbCellsY()-i -0.5) * getCellSpacing_Y() ;
+}
+
+const std::map<int,Coordinate>
+structured2dRegularRectangle::getCellFacesPos(RegionID id) const
+{
+    std::map<int,Coordinate> out;
+
+    for (auto cellId : region(id))
+    {
+        GLOBAL::scalar x = getCellCenterCoordinate_X(cellId);
+        GLOBAL::scalar y = getCellCenterCoordinate_Y(cellId);
+
+        switch (id)
+        {
+            case RegionID::Boundary_bottom:
+                y -= getCellSpacing_Y() * GLOBAL::scalar(0.5);
+                break;
+
+            case RegionID::Boundary_top:
+                y += getCellSpacing_Y() * GLOBAL::scalar(0.5);
+                break;
+
+            case RegionID::Boundary_left:
+                x -= getCellSpacing_X() * GLOBAL::scalar(0.5);
+                break;
+
+            case RegionID::Boundary_right:
+                x += getCellSpacing_X() * GLOBAL::scalar(0.5);
+                break;
+
+            default:
+                x = GLOBAL::scalar(0);
+                y = GLOBAL::scalar(0);
+                break;
+        }
+        out.emplace(cellId, Coordinate(x,y));
+    }
+    return out;
+}

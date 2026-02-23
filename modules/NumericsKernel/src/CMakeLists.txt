@@ -26,6 +26,8 @@ target_include_directories(numerics_kernel_lib
         ${CMAKE_SOURCE_DIR}/modules/Common
         PRIVATE
         .
+        ${CMAKE_SOURCE_DIR}/modules/Mesh/include
+
 )
 
 
