@@ -119,7 +119,7 @@ void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::ve
         LINEQSOLVERS::solve_BiCGSTAB(A, x, b, tolerance, maxIter);
     }
 
-    if (checkMatrixTypeIsSparse(A))
+    if (!checkMatrixTypeIsSparse(A))
     {
         std::cerr<<"WARNING: Sparse matrix has been implicitly converted to a dense matrix."<<std::endl;
     }
