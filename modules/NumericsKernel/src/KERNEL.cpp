@@ -92,6 +92,24 @@ KERNEL::smatrix& KERNEL::ObjectRegistry::getSparseMatrixRef(MatrixHandle handle)
     return **matPtr;
 }
 
+KERNEL::smatrix KERNEL::createPreallocatedSparseMatrix(std::size_t N,int nx, std::vector<int> rowPosition)
+{
+    std::vector<size_t> reservePos(N, rowPosition.size());
+    for (size_t i = 0; i < nx; ++i)
+    {
+        reservePos[i] = rowPosition.size()-1;
+    }
+    for (size_t i = N-nx; i < N; ++i)
+    {
+        reservePos[i] = rowPosition.size()-1;
+    }
+    reservePos[0] = rowPosition.size()-2;
+    reservePos.back() = rowPosition.size()-2;
+
+    smatrix A(N,N,reservePos);
+    return A;
+}
+
 void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
 
     // static_assert( std::is_same_v<decltype(A), const KERNEL::dmatrix& >, "Error in KERNEL::solve: input matrix not dense.");

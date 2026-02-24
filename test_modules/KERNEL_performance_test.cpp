@@ -49,7 +49,7 @@ struct NK_DynamikMatrixBuilder : public::testing::Test
         const std::vector<std::map<std::string,
         std::vector<long long>>>& matrixTime,
         int bandIndex,
-        int outputWidth = 10,
+        int outputWidth = 8,
         std::ostream& os = std::cout)
     {
         // Header
@@ -81,33 +81,6 @@ struct NK_DynamikMatrixBuilder : public::testing::Test
         }
     }
 
-    KERNEL::smatrix createPreallocatedSparseMatrix(std::size_t N, int numberOfBands,int nx)
-    {
-        KERNEL::smatrix A;
-        A.resize(N,N);
-        if (N == 0) return A;
-        std::size_t reservedRows = 0;
-        std::size_t cur = 5*5;
-
-        // Reserve in blocks (doubling) to speed up a large allocation time.
-        // Test shows this cuts preallocation time to ~1/4 compared to reserving everything in one go.
-        while (cur < N)
-        {
-            std::size_t next = std::min(cur * 2, N);
-            A.resize(next, next);
-            A.reserve(static_cast<std::size_t>(numberOfBands) * next);
-
-            for (std::size_t r = reservedRows; r < next; ++r)
-            {
-                A.reserve(r, numberOfBands);
-            }
-
-            reservedRows = next;
-            cur = next;
-        }
-        return A;
-    }
-
     template<typename SolverFunc>
     void runTimedSolver(const std::string& label, KERNEL::smatrix& A, KERNEL::vector& b, KERNEL::vector& x, const int nx, int bandIndex, SolverFunc solver)
     {
@@ -131,6 +104,21 @@ struct NK_DynamikMatrixBuilder : public::testing::Test
         }
     }
 };
+
+std::vector<int> generateBands(int nx, int bandnumber)
+{
+    std::vector<int> bands;
+
+    if (bandnumber == 5)
+    {
+        bands = { -nx, -1, 0, 1, nx };
+    }
+    else if (bandnumber == 9)
+    {
+        bands = { -2*nx, -nx, -2, -1, 0, 1, 2, nx, 2*nx };
+    }
+    return bands;
+}
 
 TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
 {
@@ -166,7 +154,8 @@ TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
 TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_increasing_system_size)
 {
     auto timer            = util::timer();
-    sizes = {4,11,15,22,31,44,63,90,126,179,252,369,490, 692};
+    sizes = {4,11,15,22,31,44,63,90,126,179,252,369,490, 692, 1000, 1400,2000};
+
     matrixTime.resize(3);
     std::vector<int> numberOfBandsVector;
     for (int bandIndex = 1; bandIndex<3; bandIndex++)
@@ -181,7 +170,8 @@ TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_
             const std::size_t N = static_cast<std::size_t>(nx) * static_cast<std::size_t>(nx);
 
             timer.start();
-            auto A = createPreallocatedSparseMatrix(N,numberOfBands,nx);
+            auto vec =generateBands(nx, numberOfBands);
+            auto A = KERNEL::createPreallocatedSparseMatrix(N,nx,generateBands(nx, numberOfBands));
             KERNEL::vector x(N, 0.0);
             KERNEL::vector b(N, 0.0);
             auto allocatedTimer = timer.stop();
@@ -211,12 +201,14 @@ TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_
                 KERNEL::solve(A, x, b, 1e-13, 1000000, KERNEL::GaussSeidel);
             });
 
-            printTimingTable(sizes, matrixTime,bandIndex);
+            //printTimingTable(sizes, matrixTime,bandIndex);
         }
-        std::cout << "--------------------------------------------------------------------------Results-------------------------------------------------------------------\n";
         std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[0]) +"---------------------------------------------------------------\n";
-        printTimingTable(sizes, matrixTime,1);
-        std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[1]) +"----------------------------------------------------------------\n";
-        printTimingTable(sizes, matrixTime,2);
+        printTimingTable(sizes, matrixTime,bandIndex);
     }
+    //std::cout << "--------------------------------------------------------------------------Results-------------------------------------------------------------------\n";
+    //std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[0]) +"---------------------------------------------------------------\n";
+    //printTimingTable(sizes, matrixTime,1);
+    //std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[1]) +"----------------------------------------------------------------\n";
+    //printTimingTable(sizes, matrixTime,2);
 }
