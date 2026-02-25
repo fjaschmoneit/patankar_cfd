@@ -98,7 +98,6 @@ TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
     bool jacobiConverged = true;
     try {
         solve_Jacobi( A,x, b, 1e-15, 10000  );
-        jacobiConverged = true;
     } catch (const std::exception& e)
     {
         std::cerr << e.what() << std::endl;
