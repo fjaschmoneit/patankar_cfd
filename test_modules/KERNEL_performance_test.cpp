@@ -170,8 +170,8 @@ TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_
             const std::size_t N = static_cast<std::size_t>(nx) * static_cast<std::size_t>(nx);
 
             timer.start();
-            auto vec =generateBands(nx, numberOfBands);
-            auto A = KERNEL::createPreallocatedSparseMatrix(N,nx,generateBands(nx, numberOfBands));
+            auto vec = generateBands(nx, numberOfBands);
+            auto A = KERNEL::createPreallocatedSparseMatrix(N,generateBands(nx, numberOfBands));
             KERNEL::vector x(N, 0.0);
             KERNEL::vector b(N, 0.0);
             auto allocatedTimer = timer.stop();

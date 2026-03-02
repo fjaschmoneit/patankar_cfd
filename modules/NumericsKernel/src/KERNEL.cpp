@@ -92,19 +92,53 @@ KERNEL::smatrix& KERNEL::ObjectRegistry::getSparseMatrixRef(MatrixHandle handle)
     return **matPtr;
 }
 
-KERNEL::smatrix KERNEL::createPreallocatedSparseMatrix(std::size_t N,int nx, std::vector<int> rowPosition)
+std::pair<std::vector<int>, std::vector<int>> splitNegativePositive(const std::vector<int>& values)
 {
+    auto it = std::ranges::lower_bound(values, 0);
+
+    std::vector<int> negatives(values.begin(), it);
+
+    if (it != values.end() && *it == 0)
+        ++it;
+
+    std::vector<int> positives(it, values.end());
+
+    return {negatives, positives};
+}
+
+KERNEL::smatrix KERNEL::createPreallocatedSparseMatrix(std::size_t N, const std::vector<int>& rowPosition)
+{
+    auto [negativ, positive] = splitNegativePositive(rowPosition);
     std::vector<size_t> reservePos(N, rowPosition.size());
-    for (size_t i = 0; i < nx; ++i)
+    // find number of elements for the first part and subtract reservePos by 1
+    auto minValue = *std::ranges::min_element(negativ);
+    for (int idx = 0; idx <= abs(minValue); ++idx)
     {
-        reservePos[i] = rowPosition.size()-1;
+        for (int j : negativ)
+        {
+            if (j + idx < 0)
+            {
+                reservePos[idx] -= 1;
+            }
+            else
+                break;
+        }
     }
-    for (size_t i = N-nx; i < N; ++i)
+
+    // find number of elements for the end part and subtract reservePos by 1
+    auto maxValue = *std::ranges::max_element(positive);
+    for (std::size_t idx = N - 1; idx >= N - static_cast<std::size_t>(std::abs(maxValue)); --idx)
     {
-        reservePos[i] = rowPosition.size()-1;
+        for (int j : positive)
+        {
+            if (j + idx > N - 1)
+            {
+                reservePos[idx] -= 1;
+            }
+            else
+                break;
+        }
     }
-    reservePos[0] = rowPosition.size()-2;
-    reservePos.back() = rowPosition.size()-2;
 
     smatrix A(N,N,reservePos);
     return A;
