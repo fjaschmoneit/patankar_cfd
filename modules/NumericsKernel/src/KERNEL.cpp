@@ -8,6 +8,16 @@ KERNEL::ObjectRegistry::~ObjectRegistry() = default;
 KERNEL::ObjectRegistry::ObjectRegistry(ObjectRegistry&&) noexcept = default;
 KERNEL::ObjectRegistry& KERNEL::ObjectRegistry::operator=(ObjectRegistry&&) noexcept = default;
 
+template<typename MT>
+bool checkMatrixTypeIsSparse(const MT& A)
+{
+    if constexpr (blaze::IsSparseMatrix_v<MT>)
+    {
+        return true;
+    }
+    return false;
+}
+
 // Vector creation
 KERNEL::VectorHandle KERNEL::ObjectRegistry::newVector(size_t size, GLOBAL::scalar initialValue) {
     if (registryClosed_)
@@ -82,6 +92,58 @@ KERNEL::smatrix& KERNEL::ObjectRegistry::getSparseMatrixRef(MatrixHandle handle)
     return **matPtr;
 }
 
+std::pair<std::vector<int>, std::vector<int>> splitNegativePositive(const std::vector<int>& values)
+{
+    auto it = std::ranges::lower_bound(values, 0);
+
+    std::vector<int> negatives(values.begin(), it);
+
+    if (it != values.end() && *it == 0)
+        ++it;
+
+    std::vector<int> positives(it, values.end());
+
+    return {negatives, positives};
+}
+
+KERNEL::smatrix KERNEL::createPreallocatedSparseMatrix(std::size_t N, const std::vector<int>& rowPosition)
+{
+    auto [negativ, positive] = splitNegativePositive(rowPosition);
+    std::vector<size_t> reservePos(N, rowPosition.size());
+    // find number of elements for the first part and subtract reservePos by 1
+    auto minValue = *std::ranges::min_element(negativ);
+    for (int idx = 0; idx <= abs(minValue); ++idx)
+    {
+        for (int j : negativ)
+        {
+            if (j + idx < 0)
+            {
+                reservePos[idx] -= 1;
+            }
+            else
+                break;
+        }
+    }
+
+    // find number of elements for the end part and subtract reservePos by 1
+    auto maxValue = *std::ranges::max_element(positive);
+    for (std::size_t idx = N - 1; idx >= N - static_cast<std::size_t>(std::abs(maxValue)); --idx)
+    {
+        for (int j : positive)
+        {
+            if (j + idx > N - 1)
+            {
+                reservePos[idx] -= 1;
+            }
+            else
+                break;
+        }
+    }
+
+    smatrix A(N,N,reservePos);
+    return A;
+}
+
 void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
 
     // static_assert( std::is_same_v<decltype(A), const KERNEL::dmatrix& >, "Error in KERNEL::solve: input matrix not dense.");
@@ -107,6 +169,11 @@ void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::ve
 
     if (method == BiCGSTAB) {
         LINEQSOLVERS::solve_BiCGSTAB(A, x, b, tolerance, maxIter);
+    }
+
+    if (!checkMatrixTypeIsSparse(A))
+    {
+        std::cerr<<"WARNING: Sparse matrix has been implicitly converted to a dense matrix."<<std::endl;
     }
 
 }

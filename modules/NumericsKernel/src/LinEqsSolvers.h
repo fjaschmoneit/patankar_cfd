@@ -99,7 +99,7 @@ namespace LINEQSOLVERS {
 
         if (rel_res <= tolerance)
         {
-            std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations\n";
+            //std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations\n";
             return;
         }
         auto message = std::string("Bi_CG_STAB_sparse NOT converged (iters=" + std::to_string(it) + ", rel res=" + std::to_string(rel_res) + ")");

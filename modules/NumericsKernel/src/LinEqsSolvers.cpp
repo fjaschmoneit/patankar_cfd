@@ -50,7 +50,7 @@ namespace LINEQSOLVERS {
             x = invDSparse * rhs;
             if ( blaze::norm(x-x_old) < tolerance)
             {
-                std::cout<<"Jacobi solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
+                //std::cout<<"Jacobi solver converged after "<<  std::to_string(k)<<" iterations."<<std::endl;
                 break;
             }
             x_old = x;
@@ -94,7 +94,7 @@ namespace LINEQSOLVERS {
 
             if( blaze::norm( x - x_old ) < tolerance )
             {
-                std::cout << "Gauss-Seidel solver converged after " << k << " iterations." << std::endl;
+                //std::cout << "Gauss-Seidel solver converged after " << k << " iterations." << std::endl;
                 return;
             }
             x_old = x;

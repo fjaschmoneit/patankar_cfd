@@ -20,7 +20,7 @@ namespace KERNEL {
 
     void solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
     void solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
-
+    smatrix createPreallocatedSparseMatrix(std::size_t N, const std::vector<int>& rowPosition);
     class ObjectRegistry {
     private:
         std::unordered_map<size_t, ObjectVariantPtr> registry_;
