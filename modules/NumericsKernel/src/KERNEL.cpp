@@ -1,6 +1,7 @@
 #include "../include/KERNEL.h"
 #include "LinEqsSolvers.h"
 #include "blaze/Blaze.h"
+#include "algorithm"
 
 // make object registry to have own files.
 KERNEL::ObjectRegistry::ObjectRegistry() = default;
@@ -16,6 +17,20 @@ bool checkMatrixTypeIsSparse(const MT& A)
         return true;
     }
     return false;
+}
+
+KERNEL::smatrix KERNEL::newTempBandedSMatrix(std::size_t N, std::vector<int> bandIDs) {
+    std::ranges::sort(bandIDs);
+
+    std::vector<size_t> nonzeros(N, 0.0);
+
+    for ( size_t r=0; r<N; ++r){
+        nonzeros[r] = std::ranges::count_if(bandIDs, [N](int x) { return x >= 0 && x < N; });
+        std::ranges::transform(bandIDs, bandIDs.begin(), [](int x) { return x+1; });
+    }
+
+    smatrix A(N,N,nonzeros);
+    return A;
 }
 
 // Vector creation
@@ -90,58 +105,6 @@ KERNEL::smatrix& KERNEL::ObjectRegistry::getSparseMatrixRef(MatrixHandle handle)
         throw std::runtime_error("Object is not a sparse matrix");
 
     return **matPtr;
-}
-
-std::pair<std::vector<int>, std::vector<int>> splitNegativePositive(const std::vector<int>& values)
-{
-    auto it = std::ranges::lower_bound(values, 0);
-
-    std::vector<int> negatives(values.begin(), it);
-
-    if (it != values.end() && *it == 0)
-        ++it;
-
-    std::vector<int> positives(it, values.end());
-
-    return {negatives, positives};
-}
-
-KERNEL::smatrix KERNEL::createPreallocatedSparseMatrix(std::size_t N, const std::vector<int>& rowPosition)
-{
-    auto [negativ, positive] = splitNegativePositive(rowPosition);
-    std::vector<size_t> reservePos(N, rowPosition.size());
-    // find number of elements for the first part and subtract reservePos by 1
-    auto minValue = *std::ranges::min_element(negativ);
-    for (int idx = 0; idx <= abs(minValue); ++idx)
-    {
-        for (int j : negativ)
-        {
-            if (j + idx < 0)
-            {
-                reservePos[idx] -= 1;
-            }
-            else
-                break;
-        }
-    }
-
-    // find number of elements for the end part and subtract reservePos by 1
-    auto maxValue = *std::ranges::max_element(positive);
-    for (std::size_t idx = N - 1; idx >= N - static_cast<std::size_t>(std::abs(maxValue)); --idx)
-    {
-        for (int j : positive)
-        {
-            if (j + idx > N - 1)
-            {
-                reservePos[idx] -= 1;
-            }
-            else
-                break;
-        }
-    }
-
-    smatrix A(N,N,reservePos);
-    return A;
 }
 
 void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {

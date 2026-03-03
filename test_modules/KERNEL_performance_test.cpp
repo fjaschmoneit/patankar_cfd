@@ -20,7 +20,6 @@ struct NK_DynamikMatrixBuilder : public::testing::Test
 
     std::vector<std::map<std::string,std::vector<long long>>> matrixTime;
     int timeLimitMs = 900;
-    std::vector<int> sizes;
     int numberOfBands = 0;
     int numberOffDiagPairs = 0;
     template<typename MatrixType>
@@ -154,7 +153,11 @@ TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
 TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_increasing_system_size)
 {
     auto timer            = util::timer();
-    sizes = {4,11,15,22,31,44,63,90,126,179,252,369,490, 692, 1000, 1400,2000};
+    // const std::vector<int> NX = {490, 692, 1000, 1400, 2000};
+    const std::vector<int> NX = {4,11,15,22};
+    // const std::vector<int> NX = {4,11,15,22,31,44,63,90,126,179,252,369,490, 692, 1000, 1400,2000};
+    // const std::vector<int> size = {4,11,50, 100, 500, 1000};
+
 
     matrixTime.resize(3);
     std::vector<int> numberOfBandsVector;
@@ -162,16 +165,16 @@ TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_
     {
         numberOfBands = bandIndex*4+1;
         numberOfBandsVector.push_back(numberOfBands);
-        numberOffDiagPairs = (numberOfBands - 1) / 2;
+        numberOffDiagPairs = (numberOfBands - 1) / 2;  // what is the type??
         std::cout << "Number Of Bands: " << numberOfBands << std::endl;
-        for (int ni = 0; ni<sizes.size(); ni++)
+        for (int ni = 0; ni<NX.size(); ni++)
         {
-            int nx = sizes[ni];
+            int nx = NX[ni];
             const std::size_t N = static_cast<std::size_t>(nx) * static_cast<std::size_t>(nx);
 
             timer.start();
             auto vec = generateBands(nx, numberOfBands);
-            auto A = KERNEL::createPreallocatedSparseMatrix(N,generateBands(nx, numberOfBands));
+            auto A = KERNEL::newTempBandedSMatrix(N, generateBands(nx, numberOfBands));
             KERNEL::vector x(N, 0.0);
             KERNEL::vector b(N, 0.0);
             auto allocatedTimer = timer.stop();
@@ -201,10 +204,10 @@ TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_
                 KERNEL::solve(A, x, b, 1e-13, 1000000, KERNEL::GaussSeidel);
             });
 
-            //printTimingTable(sizes, matrixTime,bandIndex);
+            // printTimingTable(NX, matrixTime,bandIndex);
         }
         std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[0]) +"---------------------------------------------------------------\n";
-        printTimingTable(sizes, matrixTime,bandIndex);
+        printTimingTable(NX, matrixTime,bandIndex);
     }
     //std::cout << "--------------------------------------------------------------------------Results-------------------------------------------------------------------\n";
     //std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[0]) +"---------------------------------------------------------------\n";

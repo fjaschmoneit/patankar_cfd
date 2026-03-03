@@ -8,19 +8,23 @@ namespace KERNEL {
         GaussSeidel, BiCGSTAB, Jacobi, Blaze_automatic
     };
 
+
+    smatrix newTempBandedSMatrix(std::size_t N, std::vector<int> bandIDs);
+
+    void solve(const smatrix& A, vector& x, const vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
+    void solve(const dmatrix& A, vector& x, const vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
+
+
     // Variant holding unique_ptrs to vector or matrix
     using ObjectVariantPtr = std::variant<
-        std::unique_ptr<KERNEL::vector>,
-        std::unique_ptr<KERNEL::dmatrix>,
-        std::unique_ptr<KERNEL::smatrix>
+        std::unique_ptr<vector>,
+        std::unique_ptr<dmatrix>,
+        std::unique_ptr<smatrix>
     >;
 
     struct VectorHandle { size_t id; };
     struct MatrixHandle { size_t id; };
 
-    void solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
-    void solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
-    smatrix createPreallocatedSparseMatrix(std::size_t N, const std::vector<int>& rowPosition);
     class ObjectRegistry {
     private:
         std::unordered_map<size_t, ObjectVariantPtr> registry_;
