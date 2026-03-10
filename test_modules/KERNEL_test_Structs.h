@@ -1,3 +1,5 @@
+//
+// #include "KERNEL.h"
 
 struct NK_matrixBuilder : public::testing::Test
 {
@@ -12,8 +14,8 @@ struct NK_matrixBuilder : public::testing::Test
     template<typename MatrixType>
     void setSparseProblem_1(MatrixType& A, KERNEL::vector& b, KERNEL::vector& solution ) {
 
-        fillBand<MatrixType>( blaze::band(A,0), 2.0 );
-        fillBand<MatrixType>( blaze::band(A,1), 1.0 );
+        KERNEL::fillBand<MatrixType>( blaze::band(A,0), 2.0 );
+        KERNEL::fillBand<MatrixType>( blaze::band(A,1), 1.0 );
 
         std::fill(b.begin(), b.end(), 1.0);
         std::fill(solution.begin(), solution.end(), 0.0);
@@ -44,9 +46,10 @@ struct NK_matrixBuilder : public::testing::Test
     void setSparseProblem_2(MatrixType& A, KERNEL::vector& b, KERNEL::vector& solution )
     {
         //only for problems bigger then 7
-        fillBand<MatrixType>( blaze::band(A,0), -2.0 );
-        fillBand<MatrixType>( blaze::band(A,4), 1.0 );
-        fillBand<MatrixType>( blaze::band(A,-4), 1.0 );
+
+        KERNEL::fillBand<MatrixType>( blaze::band(A,0), -2.0 );
+        KERNEL::fillBand<MatrixType>( blaze::band(A,4), 1.0 );
+        KERNEL::fillBand<MatrixType>( blaze::band(A,-4), 1.0 );
 
         auto N = b.size();
         b[0] = 3.0;
@@ -78,7 +81,9 @@ struct NK_matrixBuilder : public::testing::Test
                 A(i,j) = 1.0;
             }
         }
-        fillBand<MatrixType>( blaze::band(A,0), 2.0 );
+        auto a0 = blaze::band(A,0);
+        std::fill(a0.begin(), a0.end(), 2.0);
+        // fillBand<MatrixType>( blaze::band(A,0), 2.0 );
 
         auto Q = 0.5*N*(N+1);
         std::iota(b.begin(), b.end(), 1+Q);

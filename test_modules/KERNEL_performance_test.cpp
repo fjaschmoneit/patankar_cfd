@@ -1,73 +1,75 @@
 #include <gtest/gtest.h>
-#include "../../NumericsKernel/src/LinEqsSolvers.h"
-#include "KERNEL_test_Structs.h"
+#include <ranges>
+#include <fstream>
+
 #include "../modules/Common/Util.h"
 #include "KERNEL.h"
+#include "KERNEL_test_Structs.h"
 
-using namespace LINEQSOLVERS;
+struct NK_DynamikMatrixBuilder : public::testing::Test {
 
-struct NK_DynamikMatrixBuilder : public::testing::Test
-{
-
-    //    ( 2 1 0 0 0 0 )    ( x_0 )       (1)
-    //    ( 0 2 1 0 0 0 )    ( x_1 )       (2)
-    //    ( 0 0 2 1 0 0 )    ( x_2 )       (1)
-    //    ( 0 0 0 2 1 0 )  * ( x_3 )    =  (2)
-    //    ( 0 0 0 0 2 1 )    ( x_4 )       (1)
-    //    ( 0 0 0 0 0 2 )    ( x_5 )       (2)
-    //
-    // solution: x = (0, 1, 0, 1, 0, 1)ˆT
-
-    std::vector<std::map<std::string,std::vector<long long>>> matrixTime;
-    int timeLimitMs = 900;
-    int numberOfBands = 0;
-    int numberOffDiagPairs = 0;
     template<typename MatrixType>
-    void setSparseProblem_1(MatrixType& A, KERNEL::vector& b, KERNEL::vector& solution, int nx)
+    void setSparseProblem_1(MatrixType& A, KERNEL::vector& b, KERNEL::vector& solution)
     {
-        auto rows = A.rows();
-        auto ap = blaze::band(A,0);
-        //Set all main-diagonal coefficients to -0.2
-        for (size_t i = 0; i < ap.size(); ++i) {ap[i] = -0.2;}
-        for (int i = 0; i < numberOffDiagPairs; i++)
-        {
-            auto as = blaze::band(A,static_cast<int>(i*nx + 1));
-            auto an = blaze::band(A,static_cast<int>(-i*nx - 1));
-            auto size_of_bands = ap.size()-(i*nx + 1);
+        std::vector<int> bandIDs = KERNEL::getBandIDs(A);
 
-            //Set all second-diagonal coefficients to 0.01
-            for (size_t ii = 0; ii < size_of_bands; ++ii){as[ii]   = 0.01;}
-            for (size_t ii = 0; ii < size_of_bands; ++ii){an[ii]   = 0.01;}
+        for (auto id : bandIDs) {
+            KERNEL::fillBand(blaze::band(A,id), 0.1*abs(id) );
         }
+        KERNEL::fillBand(blaze::band(A,0), -static_cast<int>(bandIDs.size()) );
+
         std::iota(solution.begin(), solution.end(), 0.0);
         b = A*solution;
     }
 
+    // FJA return also number of iterations
+    // make output easyly readable csv format
+    // inlcude also float/double in test
+    template<typename MatrixType, typename SolverFunc, typename... SolverArgs>
+    long long timeSolver(
+        const MatrixType& A,
+        KERNEL::vector& x,
+        const KERNEL::vector& b,
+        const KERNEL::vector& s,
+        SolverFunc solver,
+        SolverArgs&&... solverArgs){
+
+        auto timer            = util::timer();
+        auto testSampleAddress = x.size()%7;
+
+        int nTests = 4;
+        long long timeDiff = 0;
+        for (auto i : std::views::iota(0,nTests) ) {
+            std::ranges::fill(x,0.0);
+
+            timer.start();
+            solver(A, x, b, std::forward<SolverArgs>(solverArgs)...);
+            timeDiff += timer.stop();
+        }
+
+        EXPECT_NEAR(s[testSampleAddress], x[testSampleAddress], 1e-8);
+
+        return timeDiff/nTests;
+    }
+
     static void printTimingTable(
-        const std::vector<int>& sizes,
-        const std::vector<std::map<std::string,
-        std::vector<long long>>>& matrixTime,
-        int bandIndex,
-        int outputWidth = 8,
-        std::ostream& os = std::cout)
+        const std::vector<size_t>& Ns,
+        const std::map<const char*,std::vector<long long>>& timeMap,
+        std::ostream& os)
     {
-        // Header
-        os << std::left << std::setw(outputWidth+16) << "N of elements";
-        for (size_t i = 0; i < sizes.size(); ++i) {
-            const long long N = 1LL * sizes[i] * sizes[i];
+        int outputWidth = 8;
+
+        os << std::left << std::setw(outputWidth+16) << "Nb of elements";
+        for ( auto N:Ns){
             os << std::right << std::setw(outputWidth) << N;
         }
         os << "\n";
 
-        for (std::map<std::string, std::vector<long long>>::const_iterator it = matrixTime[bandIndex].begin();
-             it != matrixTime[bandIndex].end(); ++it)
-        {
-            const std::string& method = it->first;
-            const std::vector<long long>& times = it->second;
+        for (const auto& [method, times] : timeMap){
 
             os << std::left << std::setw(outputWidth+16) << method;
 
-            for (size_t i = 0; i < sizes.size(); ++i) {
+            for (size_t i = 0; i < Ns.size(); ++i) {
                 if (i < times.size()) {
                     std::ostringstream cell;
                     cell << times[i] << " ms";
@@ -79,45 +81,82 @@ struct NK_DynamikMatrixBuilder : public::testing::Test
             os << "\n";
         }
     }
-
-    template<typename SolverFunc>
-    void runTimedSolver(const std::string& label, KERNEL::smatrix& A, KERNEL::vector& b, KERNEL::vector& x, const int nx, int bandIndex, SolverFunc solver)
-    {
-        if (matrixTime[bandIndex][label+"_solve"].empty() ||
-            matrixTime[bandIndex][label+"_solve"].back() < timeLimitMs)
-        {
-            auto timer = util::timer();
-            // reset all vectors to 0.
-            b = 0.0; x = 0.0;
-            KERNEL::vector solution(nx*nx, 0.0);
-            timer.start();
-            setSparseProblem_1<KERNEL::smatrix>(A, b, solution, nx);
-            auto collectionTime = timer.stop();
-            if (label == "BiCGSTAB")
-                matrixTime[bandIndex][label+"_fill_A_matrix"].push_back(collectionTime);
-            timer.start();
-            // Solve linear system Ax = b
-            solver(A, x, b);
-            auto solverTimer = timer.stop();
-            matrixTime[bandIndex][label+"_solve"].push_back(solverTimer);
-        }
-    }
 };
 
-std::vector<int> generateBands(int nx, int bandnumber)
+TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_increasing_system_size)
 {
-    std::vector<int> bands;
+    std::string matrixType = "sparse";
 
-    if (bandnumber == 5)
-    {
-        bands = { -nx, -1, 0, 1, nx };
+    const std::vector<size_t> Ns = (matrixType=="dense")
+        ? std::vector<size_t>{500,1'000, 5'000, 10'000}
+        : std::vector<size_t>{100'000, 500'000, 1'000'000};
+
+    std::vector<std::vector<int>> arrayOfBandIDs{
+        {0,1,-1},
+        {-10,-1,0,1,10},
+        {-20,-10,-1,0,1,10,20},
+        // {-40,-20,-10,-1,0,1,10,20}
+    };
+
+    std::ofstream os( std::string(TEST_SOURCE_DIR) + "/Performance_Results/performanceTestResults_" +matrixType + "_" + util::timer::today()  + ".txt");
+    if (!os.is_open())
+        throw std::runtime_error("Could not open output file");
+
+    for (auto bandIDs : arrayOfBandIDs) {
+        std::map< const char*,std::vector<long long> > timeMap;
+
+        for (auto N : Ns)
+        {
+            auto timer              = util::timer();
+            long long dt            = 0.0;
+
+            // creating the matrix and vectors
+            timer.start();
+                KERNEL::smatrix A = KERNEL::newTempBandedSMatrix(N, bandIDs, -1.);
+                KERNEL::vector x(N, 0.0);
+                KERNEL::vector b(N, 0.0);
+                KERNEL::vector s(N, 0.0);
+            timeMap["allocation sparse"].push_back(timer.stop());
+
+            // filling matrix with values
+            timer.start();
+                setSparseProblem_1<KERNEL::smatrix>(A, b, s);
+            timeMap["fill_A_matrix sparse"].push_back(timer.stop());
+
+            if (matrixType=="sparse") {
+                // I need this function pointer to tell the compiler which solve() overload to choose.
+                using SparseSolverPtr = void(*)(const KERNEL::smatrix&,KERNEL::vector&,const KERNEL::vector&,KERNEL::SolverMethod,GLOBAL::scalar,unsigned int);
+
+                dt = timeSolver(A, x, b, s, static_cast<SparseSolverPtr>(KERNEL::solve), KERNEL::BiCGSTAB, 1e-13, 1'000'000u);
+                timeMap["BiCGSTAB"].push_back(dt);
+
+            }else {
+                const KERNEL::dmatrix Ad(A);
+                using DenseSolverPtr = void(*)(const KERNEL::dmatrix&,KERNEL::vector&,const KERNEL::vector&,KERNEL::SolverMethod,GLOBAL::scalar,unsigned int);
+
+                dt = timeSolver(Ad, x, b, s, static_cast<DenseSolverPtr>(KERNEL::solve), KERNEL::BiCGSTAB, 1e-13, 1'000'000u);
+                timeMap["BiCGSTAB"].push_back(dt);
+
+                dt = timeSolver(Ad, x, b, s, static_cast<DenseSolverPtr>(KERNEL::solve), KERNEL::Jacobi, 1e-13, 1'000'000u);
+                timeMap["Jacobi"].push_back(dt);
+
+                // sth. wrong with gauss seidel. It is very slow.
+                // dt = timeSolver(Ad, x, b, s, static_cast<DenseSolverPtr>(KERNEL::solve), KERNEL::GaussSeidel, 1e-13, 1'000'000u);
+                // timeMap["Gauss-Seidel"].push_back(dt);
+
+                dt = timeSolver(Ad, x, b, s, static_cast<DenseSolverPtr>(KERNEL::solve), KERNEL::Blaze_automatic, 1e-13, 1'000'000u);
+                timeMap["Blaze native"].push_back(dt);
+
+            }
     }
-    else if (bandnumber == 9)
-    {
-        bands = { -2*nx, -nx, -2, -1, 0, 1, 2, nx, 2*nx };
+
+    os << "----------------------------------------------------------------------Bands {";
+    std::ranges::for_each( bandIDs, [&](const auto& n) { os << std::scientific << std::setprecision(3)<< ' ' << n; });
+    os << " }---------------------------------------------------------------\n";
+    printTimingTable(Ns, timeMap, os);
     }
-    return bands;
 }
+
 
 TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
 {
@@ -140,7 +179,8 @@ TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
         //setDenseProblem_1<KERNEL::smatrix>(A, b, solution);
 
         timer3.start();
-        solve_BiCGSTAB<KERNEL::smatrix>( A, x, b, 1e-13, 10000);
+        KERNEL::solve(A, x, b, KERNEL::BiCGSTAB);
+        // solve_BiCGSTAB<KERNEL::smatrix>( A, x, b, 1e-13, 10000);
         auto T3 = timer3.stop();
         auto T2 = timer2.stop();
         auto T1 = timer1.stop();
@@ -148,70 +188,4 @@ TEST_F(NK_matrixBuilder, performance_BiCGSTAB_sparseMatrix1)
         std::cout << N << ", \t" << T1 << " ms, \t" << T2 << " ms, \t" << T3 << " ms " << std::endl;
         EXPECT_NEAR(x[2], solution[2], 1e-8);
     }
-}
-
-TEST_F(NK_DynamikMatrixBuilder, Execution_time_comparison_of_linear_solvers_for_increasing_system_size)
-{
-    auto timer            = util::timer();
-    // const std::vector<int> NX = {490, 692, 1000, 1400, 2000};
-    const std::vector<int> NX = {4,11,15,22};
-    // const std::vector<int> NX = {4,11,15,22,31,44,63,90,126,179,252,369,490, 692, 1000, 1400,2000};
-    // const std::vector<int> size = {4,11,50, 100, 500, 1000};
-
-
-    matrixTime.resize(3);
-    std::vector<int> numberOfBandsVector;
-    for (int bandIndex = 1; bandIndex<3; bandIndex++)
-    {
-        numberOfBands = bandIndex*4+1;
-        numberOfBandsVector.push_back(numberOfBands);
-        numberOffDiagPairs = (numberOfBands - 1) / 2;  // what is the type??
-        std::cout << "Number Of Bands: " << numberOfBands << std::endl;
-        for (int ni = 0; ni<NX.size(); ni++)
-        {
-            int nx = NX[ni];
-            const std::size_t N = static_cast<std::size_t>(nx) * static_cast<std::size_t>(nx);
-
-            timer.start();
-            auto vec = generateBands(nx, numberOfBands);
-            auto A = KERNEL::newTempBandedSMatrix(N, generateBands(nx, numberOfBands));
-            KERNEL::vector x(N, 0.0);
-            KERNEL::vector b(N, 0.0);
-            auto allocatedTimer = timer.stop();
-            matrixTime[bandIndex]["allocation"].push_back(allocatedTimer);
-
-            //Record execution time of the BiCGSTAB solver
-            runTimedSolver("BiCGSTAB",A,b,x,nx,bandIndex,[&](const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b)
-            {
-                KERNEL::solve(A, x, b, 1e-13, 1000000, KERNEL::BiCGSTAB);
-            });
-
-            // Record execution time of the Blaze solver
-            runTimedSolver("Blaze_solver",A,b,x,nx,bandIndex,[&](const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b)
-            {
-                KERNEL::solve(A, x, b,1e-13,1000000,KERNEL::Blaze_automatic);
-            });
-
-            // Record execution time of the Jacobi solver
-            runTimedSolver("Jacobi",A,b,x,nx,bandIndex,[&](const KERNEL::dmatrix& A, KERNEL::vector& x,const KERNEL::vector& b)
-            {
-                KERNEL::solve(A, x, b, 1e-13, 100000, KERNEL::Jacobi);
-            });
-
-            //Record execution time of the GaussSeidel solver
-            runTimedSolver("GaussSeidel",A,b,x,nx,bandIndex,[&](const KERNEL::dmatrix& A, KERNEL::vector& x, KERNEL::vector& b)
-            {
-                KERNEL::solve(A, x, b, 1e-13, 1000000, KERNEL::GaussSeidel);
-            });
-
-            // printTimingTable(NX, matrixTime,bandIndex);
-        }
-        std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[0]) +"---------------------------------------------------------------\n";
-        printTimingTable(NX, matrixTime,bandIndex);
-    }
-    //std::cout << "--------------------------------------------------------------------------Results-------------------------------------------------------------------\n";
-    //std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[0]) +"---------------------------------------------------------------\n";
-    //printTimingTable(sizes, matrixTime,1);
-    //std::cout << "----------------------------------------------------------------------Number of Band "+ std::to_string(numberOfBandsVector[1]) +"----------------------------------------------------------------\n";
-    //printTimingTable(sizes, matrixTime,2);
 }

@@ -1,0 +1,21 @@
+----------------------------------------------------------------------Bands { 0 1 -1 }---------------------------------------------------------------
+Nb of elements               500    1000    5000   10000   20000
+allocation sparse           0 ms    0 ms    0 ms    0 ms    0 ms
+fill_A_matrix sparse        0 ms    0 ms    0 ms    0 ms    0 ms
+BiCGSTAB                    0 ms    2 ms   71 ms  301 ms 1186 ms
+Jacobi                      0 ms    4 ms   98 ms  411 ms 1821 ms
+Blaze native                0 ms    4 ms  340 ms 2422 ms17575 ms
+----------------------------------------------------------------------Bands { -10 -1 0 1 10 }---------------------------------------------------------------
+Nb of elements               500    1000    5000   10000   20000
+allocation sparse           0 ms    0 ms    0 ms    0 ms    0 ms
+fill_A_matrix sparse        0 ms    0 ms    0 ms    0 ms    0 ms
+BiCGSTAB                    1 ms    6 ms  173 ms  727 ms 2999 ms
+Jacobi                      2 ms    9 ms  424 ms 2145 ms16722 ms
+Blaze native                1 ms    4 ms  331 ms 2363 ms17337 ms
+----------------------------------------------------------------------Bands { -20 -10 -1 0 1 10 20 }---------------------------------------------------------------
+Nb of elements               500    1000    5000   10000   20000
+allocation sparse           0 ms    0 ms    0 ms    0 ms    1 ms
+fill_A_matrix sparse        0 ms    0 ms    0 ms    0 ms    1 ms
+BiCGSTAB                    4 ms   17 ms  465 ms 1946 ms 7771 ms
+Jacobi                     14 ms   61 ms 2270 ms18500 ms422637 ms
+Blaze native                1 ms    4 ms  333 ms 2395 ms25609 ms

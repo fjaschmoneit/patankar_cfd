@@ -117,7 +117,7 @@ TEST_F(FVM_laplaceTests, FVM_testtest) {
     // an educated guess for u:
     std::ranges::fill(u, 2.0);
 
-    KERNEL::solve(A, u, b, 1e-10, 1000, KERNEL::BiCGSTAB);
+    KERNEL::solve(A, u, b, KERNEL::BiCGSTAB, 1e-10, 1000);
 
     for (unsigned int i = 0; i < correctResult.size(); i++) {
         EXPECT_NEAR(u[i], correctResult[i], 1e-4);
@@ -209,7 +209,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs) {
         blaze::band(A,mnx)[i] = an[i+nx];
     }
 
-    KERNEL::solve(A, u, b, 1e-15, 1000, KERNEL::BiCGSTAB);
+    KERNEL::solve(A, u, b, KERNEL::BiCGSTAB, 1e-15, 1000);
 
     // theoretical solution, vertical mid-line at x = lenx/2
     KERNEL::vector solution( nx, 0.0 );
@@ -308,7 +308,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs3)
         const GLOBAL::scalar ypos = leny - (0.5 + static_cast<GLOBAL::scalar>(i)) * cellSpacing;
         b[p] -= bVal * xpos * ypos;
     }
-    KERNEL::solve(A, u, b, 1e-15, 100000, KERNEL::BiCGSTAB);
+    KERNEL::solve(A, u, b,KERNEL::BiCGSTAB, 1e-15, 100000);
 
     // theoretical solution, vertical mid-line at x = lenx/2
     KERNEL::vector solution( nx, 0.0 );
@@ -416,7 +416,7 @@ TEST_F(FVM_laplaceTests, sparseVarDerichletBCsSpeed)
         b[p] -= bVal * (xpos * xpos - ypos * ypos);
     }
 
-    KERNEL::solve(A, u, b, 1e-15, 2000, KERNEL::BiCGSTAB);
+    KERNEL::solve(A, u, b,  KERNEL::BiCGSTAB, 1e-15, 2000);
     // theoretical solution, vertical mid-line at x = lenx/2
     KERNEL::vector solution( nx, 0.0 );
     for (unsigned int i=0; i < nx; i++) {
@@ -541,7 +541,7 @@ TEST_F(FVM_laplaceTests, 2DPoissonDerichlet) {
     }
 
     //buildMatrixWithBandsSpeed( A, ae, aw, as, an,sp, ap, nx);
-    KERNEL::solve(A, u, b, 1e-15, 2000, KERNEL::BiCGSTAB);
+    KERNEL::solve(A, u, b, KERNEL::BiCGSTAB, 1e-15, 2000);
 
     KERNEL::vector solution( nx, 0.0 );
     for (unsigned int i=0; i < nx; i++) {
