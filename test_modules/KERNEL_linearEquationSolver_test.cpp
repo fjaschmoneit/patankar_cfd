@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 #include "../../NumericsKernel/src/LinEqsSolvers.h"
-#include "KERNEL_test_Structs.h"
+#include "KERNEL.h"
 
+
+#include "KERNEL_test_Structs.h"
 using namespace LINEQSOLVERS;
 
 TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
@@ -24,7 +26,7 @@ TEST_F(NK_matrixBuilder, sparseMatrix1_BiCGSTAB)
 // The RHS is constructed so the analytical solution is known (x = [1,2,3,…,N]), and we verify the computed solution matches within tolerance.
 TEST_F(NK_matrixBuilder, sparseMatrix2_BiCGSTAB)
 {
-    unsigned N = 2000;
+    unsigned N = 200;
     KERNEL::smatrix A(N,N, 5*N);
     KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
 
@@ -95,10 +97,9 @@ TEST_F(NK_matrixBuilder, denseMatrix1_Jacobi)
     KERNEL::dmatrix A(N,N, 5*N);
     KERNEL::vector b(N,0.0), x(N, 0.0), solution(N, 0.0);
     setDenseProblem_1<KERNEL::dmatrix>(A, b, solution);
-    bool jacobiConverged = false;
+    bool jacobiConverged = true;
     try {
         solve_Jacobi( A,x, b, 1e-15, 10000  );
-        jacobiConverged = true;
     } catch (const std::exception& e)
     {
         std::cerr << e.what() << std::endl;

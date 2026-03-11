@@ -8,18 +8,36 @@ namespace KERNEL {
         GaussSeidel, BiCGSTAB, Jacobi, Blaze_automatic
     };
 
+
+    smatrix newTempBandedSMatrix(std::size_t N, const std::vector<int>& bandIDs, GLOBAL::scalar init);
+
+
+    // test performance of these
+    template<typename MatrixType>
+    void fillBand(blaze::Band<MatrixType> band, GLOBAL::scalar value) {
+        for(size_t i = 0; i < band.size(); i++)  band[i] = value;
+    }
+
+    template<typename MatrixType>
+    void fillBand(blaze::Band<MatrixType> band, vector &values) {
+        // FJA test if length values matches length band
+        for(size_t i = 0; i < band.size(); i++)  band[i] = values[i];
+    }
+
+    std::vector<int> getBandIDs(const smatrix &A);
+
+    void solve(const smatrix& A, vector& x, const vector& b, SolverMethod method, const GLOBAL::scalar tolerance=1e-15, const unsigned int maxIter=10000);
+    void solve(const dmatrix& A, vector& x, const vector& b, SolverMethod method, const GLOBAL::scalar tolerance=1e-15, const unsigned int maxIter=10000);
+
     // Variant holding unique_ptrs to vector or matrix
     using ObjectVariantPtr = std::variant<
-        std::unique_ptr<KERNEL::vector>,
-        std::unique_ptr<KERNEL::dmatrix>,
-        std::unique_ptr<KERNEL::smatrix>
+        std::unique_ptr<vector>,
+        std::unique_ptr<dmatrix>,
+        std::unique_ptr<smatrix>
     >;
 
     struct VectorHandle { size_t id; };
     struct MatrixHandle { size_t id; };
-
-    void solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
-    void solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, SolverMethod method);
 
     class ObjectRegistry {
     private:

@@ -3,20 +3,9 @@
 #include <iostream>
 #include <cmath>
 #include "GlobalTypeDefs.h"
-#include "KernelTypeDefs.h"
+#include "KernelTypeDefs.h"     // should not be here FJA
 
 
-// these should be removed
-template<typename MatrixType>
-void fillBand(blaze::Band<MatrixType> band, GLOBAL::scalar value) {
-    for(size_t i = 0; i < band.size(); i++)  band[i] = value;
-}
-
-
-template<typename MatrixType>
-void fillBand(blaze::Band<MatrixType> band, KERNEL::vector values) {
-    for(size_t i = 0; i < band.size(); i++)  band[i] = values[i];
-}
 
 template<typename MatrixType>
 void checkLinEqSystemConsistency(const MatrixType& A, const KERNEL::vector& b) {
@@ -34,6 +23,7 @@ void checkLinEqSystemConsistency(const MatrixType& A, const KERNEL::vector& b) {
 namespace LINEQSOLVERS {
 
     // A must be strictly diagonal dominant
+    // Is very slow! check if it's okay
     void solve_GaussSeidel( const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
 
     void solve_Jacobi(      const KERNEL::dmatrix &A, KERNEL::vector& x, const KERNEL::vector &b, const GLOBAL::scalar tolerance, const unsigned int maxIter);
@@ -99,69 +89,10 @@ namespace LINEQSOLVERS {
 
         if (rel_res <= tolerance)
         {
-            std::cout << "Bi_CG_STAB_sparse converged in " << it << " iterations\n";
             return;
         }
         auto message = std::string("Bi_CG_STAB_sparse NOT converged (iters=" + std::to_string(it) + ", rel res=" + std::to_string(rel_res) + ")");
         throw std::runtime_error("Fatal error in BiCGSTAB solver: " + message);
     }
-
-
-
-    // use blaze's own linear equation solver for dense matrices.
-
-    // template<typename MatrixType>
-    // void solve_GaussSeidel1(const MatrixType& A, const KERNEL::vector& b, KERNEL::vector& x, const KERNEL::scalar tolerance, const unsigned int maxIter)
-    // {
-    //     std::cout<<"GaussSeidel1 solver started."<<std::endl;
-    //
-    //     auto n = A.rows();
-    //     KERNEL::vector x_old = x;
-    //
-    //     // copy to DENSE matrix. Not good
-    //     KERNEL::dmatrix DL(A);
-    //
-    //     // DL = lower triangular with diagonal
-    //     for(size_t i = 0; i < n; ++i) {
-    //         for(size_t j = i+1; j < n; ++j) {
-    //             DL(i, j) = 0.0;
-    //         }
-    //     }
-    //     std::cout << DL << std::endl;
-    //
-    //     // KERNEL::dmatrix B = A-DL;  // strictly upper triangular
-    //
-    //     // blaze::invert( DL );
-    //
-    //     // auto invDL = blaze::inv( DL );
-    //
-    //     // std::cout << invDL << std::endl;
-    //     //
-    //     // auto c = invDL*b;
-    //     // auto G = -invDL*(A-DL);
-    //
-    //     std::cout << A << std::endl;
-    //     std::cout << A-DL << std::endl;
-    //     // std::cout << c << std::endl;
-    //     // std::cout << G << std::endl;
-    //
-    //     // here I could free A,DL,invDL
-    //     //
-    //     for( int k = 0; k < maxIter; ++k )
-    //     {
-    //     //     // Using G and c for faster code.
-    //     //     // x = G * x_old + c
-    //     //     // x = invDL* (bb_-R * x_old);
-    //
-    //         // x = G*x_old + c;
-    //
-    //         if( blaze::norm( x - x_old ) < tolerance )
-    //         {
-    //             std::cout << "Gauss-Seidel solver converged after " << k << " iterations." << std::endl;
-    //             break;
-    //         }
-    //         x_old = x;
-    //     }
-    // }
 
 }

@@ -18,6 +18,10 @@ add_executable(
 )
 include_directories(/usr/local/include)
 
+target_compile_definitions(tests_run PRIVATE
+        TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/test_modules"
+)
+
 # Link with GoogleTest and our static library
 target_link_libraries(
         tests_run

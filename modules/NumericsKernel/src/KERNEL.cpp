@@ -1,12 +1,84 @@
 #include "../include/KERNEL.h"
 #include "LinEqsSolvers.h"
 #include "blaze/Blaze.h"
+#include "algorithm"
+#include <ranges>
 
 // make object registry to have own files.
 KERNEL::ObjectRegistry::ObjectRegistry() = default;
 KERNEL::ObjectRegistry::~ObjectRegistry() = default;
 KERNEL::ObjectRegistry::ObjectRegistry(ObjectRegistry&&) noexcept = default;
 KERNEL::ObjectRegistry& KERNEL::ObjectRegistry::operator=(ObjectRegistry&&) noexcept = default;
+
+template<typename MT>
+bool checkMatrixTypeIsSparse(const MT& A)
+{
+    if constexpr (blaze::IsSparseMatrix_v<MT>)
+    {
+        return true;
+    }
+    return false;
+}
+
+std::vector<int> KERNEL::getBandIDs(const KERNEL::smatrix &A){
+    std::vector<int> bandIDs;
+
+    // collecting indices of bands in first row:
+    for (auto it = A.cbegin(0); it != A.cend(0); ++it) {
+        bandIDs.push_back(static_cast<int>( it->index() ) );
+    }
+
+    // inserting (-)rowindex, if first nonzero entry is in first column.
+    for( size_t r=1; r<A.rows(); ++r ) {
+        auto it=A.cbegin(r);
+        if ( it->index()==0 ) {
+            bandIDs.insert(bandIDs.begin(), -static_cast<int>( r ) );
+        }
+    }
+
+    return bandIDs;
+}
+
+std::vector<size_t> calcNonzeros(std::size_t N, const std::vector<int>& bandIDs) {
+
+    // nonzeros are filled with number of bands in every row.
+    std::vector<size_t> nonzeros(N, bandIDs.size());
+
+    // For a negative band id, M, all rows [ 0, |M| [ are decremented.
+    // For a positive band id, M, all rows [N-ri, M [ are decremented.
+    for (auto bid : bandIDs) {
+        if (bid<0) {
+            for (auto& n : nonzeros | std::views::take(abs(bid))) --n;
+        }else {
+            for (auto& n : nonzeros | std::views::drop(N-bid)) --n;
+        }
+    }
+
+    return nonzeros;
+}
+
+
+KERNEL::smatrix KERNEL::newTempBandedSMatrix(std::size_t N, const std::vector<int>& bandIDs, GLOBAL::scalar init) {
+
+    auto entriesUnique = [](std::vector<int> v) {
+        std::ranges::sort(v);
+        return std::ranges::adjacent_find(v) == v.end();
+    };
+
+    if (!entriesUnique(bandIDs))
+        throw std::runtime_error("bandIDs contains duplicates");
+
+    // a vector of number of nonzero elements per matrix row
+    std::vector<size_t> nonzeros = calcNonzeros(N, bandIDs);
+
+    smatrix A(N,N,nonzeros);
+
+    for (auto bID: bandIDs) {
+        fillBand(blaze::band(A,bID), init);
+    }
+
+    return A;
+}
 
 // Vector creation
 KERNEL::VectorHandle KERNEL::ObjectRegistry::newVector(size_t size, GLOBAL::scalar initialValue) {
@@ -20,6 +92,7 @@ KERNEL::VectorHandle KERNEL::ObjectRegistry::newVector(size_t size, GLOBAL::scal
     return VectorHandle{id};
 }
 
+// FJA combine this one with newBandedTemp function
 KERNEL::MatrixHandle KERNEL::ObjectRegistry::newMatrix(size_t rows, size_t cols, bool sparse) {
     if (registryClosed_)
         throw std::runtime_error("Registry closed. New objects must be defined before closing registry.");
@@ -82,11 +155,8 @@ KERNEL::smatrix& KERNEL::ObjectRegistry::getSparseMatrixRef(MatrixHandle handle)
     return **matPtr;
 }
 
-void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
-
-    // static_assert( std::is_same_v<decltype(A), const KERNEL::dmatrix& >, "Error in KERNEL::solve: input matrix not dense.");
-
-    checkLinEqSystemConsistency(A,b);
+// FJA assert that input matrix is dmatrix type, if not abort
+void KERNEL::solve(const dmatrix& A, vector& x, const vector& b, KERNEL::SolverMethod method, const GLOBAL::scalar tolerance, const unsigned int maxIter) {
 
     if (method == BiCGSTAB) {
         LINEQSOLVERS::solve_BiCGSTAB(A, x, b, tolerance, maxIter);
@@ -99,14 +169,15 @@ void KERNEL::solve(const KERNEL::dmatrix& A, KERNEL::vector& x, const KERNEL::ve
     }
 }
 
-void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b, const GLOBAL::scalar tolerance, const unsigned int maxIter, KERNEL::SolverMethod method) {
+void KERNEL::solve(const KERNEL::smatrix& A, KERNEL::vector& x, const KERNEL::vector& b,  KERNEL::SolverMethod method, const GLOBAL::scalar tolerance, const unsigned int maxIter) {
 
-    // static_assert( std::is_same_v<decltype(A), const KERNEL::smatrix& >, "Error in KERNEL::solve: input matrix not sparse.");
-
-    checkLinEqSystemConsistency(A,b);
+    // not here!
+    // checkLinEqSystemConsistency(A,b);
 
     if (method == BiCGSTAB) {
         LINEQSOLVERS::solve_BiCGSTAB(A, x, b, tolerance, maxIter);
+    }else {
+        throw std::runtime_error("WARNING: the sparse matrix cannot be solved with the chosen linear solver.");
     }
 
 }

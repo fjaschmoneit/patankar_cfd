@@ -1,2 +1,2 @@
-#include "NumericsKernel/include/KERNEL.h"
-
+#include <vector>
+#include "modules/NumericsKernel/include/KERNEL.h"
