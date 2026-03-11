@@ -2,6 +2,7 @@
 #include "KERNEL.h"
 #include <numeric>
 #include "Util.h"
+#include "structured2d.h"
 
 struct kernelInterface : public ::testing::Test {
 };
@@ -29,6 +30,26 @@ TEST_F(kernelInterface, interfaceTest) {
     EXPECT_THROW(objReg.newMatrix(5, 3, false),std::runtime_error);
 
 }
+struct FVM_laplaceTests_mesh_class : public ::testing::Test {
+    static constexpr double tolerance = 1e-6;
+    KERNEL::MatrixHandle AHandle;
+    KERNEL::VectorHandle uHandle;
+    KERNEL::VectorHandle bHandle;
+    std::unique_ptr<MESH::structured2dRegularRectangle> mesh;
+
+    KERNEL::ObjectRegistry setUp(GLOBAL::scalar lengthX, unsigned int nbX, GLOBAL::scalar lengthY, unsigned int nbY)
+    {
+        mesh = std::make_unique<MESH::structured2dRegularRectangle>(lengthX, nbX, lengthY, nbY);
+        KERNEL::ObjectRegistry objReg;
+        AHandle = objReg.newMatrix(mesh->nbCells(), mesh->nbCells(), true);
+        uHandle = objReg.newVector(mesh->nbCells());
+        bHandle = objReg.newVector(mesh->nbCells());
+        objReg.closeRegistry();
+        return objReg;
+    }
+
+};
+
 
 // constructing a square domain with
 struct FVM_laplaceTests : public ::testing::Test {
@@ -270,8 +291,7 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs3)
     for (size_t i = 1; i < cellIndices_West.size(); ++i) {aw[cellIndices_West[i]-1]   = 0.0;}
 
     //South
-    for (size_t i = 0; i < ap.size()-nx; ++i){as[i]   = fVal;}
-
+    for (size_t i = 0; i < as.size(); ++i) {as[i] = fVal;}
     //North
     for (size_t i = 0; i < ap.size()-nx; ++i){an[i]   = fVal;}
     // Collect b for Dirichlet boundaries
@@ -321,6 +341,101 @@ TEST_F(FVM_laplaceTests, FVM_localDerichletBCs3)
     for(int i = 0; i < solution.size(); i++)
     {
         auto j = nx/2 + nx*i;
+        EXPECT_NEAR(u[j], solution[i],tolerance);
+    }
+}
+
+TEST_F(FVM_laplaceTests_mesh_class, FVM_localDerichletBCs3_introduse_Mesh)
+{
+    unsigned int nbX  = 11.0;
+    unsigned int nbY  = 16.0;
+    auto objReg = setUp(3.0, nbX,4,nbY);
+
+    auto A  = objReg.getSparseMatrixRef(AHandle);
+    auto u   = objReg.getVectorRef(uHandle);
+    auto b   = objReg.getVectorRef(bHandle);
+
+    auto ap = blaze::band(A, 0);
+    auto ae = blaze::band(A, 1);
+    auto aw = blaze::band(A,-1);
+    auto as = blaze::band(A, mesh->nbCellsX());
+    auto an = blaze::band(A,static_cast<int>(-mesh->nbCellsX()));
+
+    for (std::size_t r = 0; r < mesh->nbCells(); ++r) A.reserve(r, 5);
+
+    //Define Coefficient
+    const GLOBAL::scalar fValEW = mesh->getCellFaceArea_Y() / mesh->getCellSpacing_X();
+    const GLOBAL::scalar fValNS = mesh->getCellFaceArea_X() / mesh->getCellSpacing_Y();
+    const GLOBAL::scalar pVal   = -2.0 * (fValEW + fValNS);
+
+    //Main Diagonal
+    for (size_t i = 0; i < ap.size(); ++i) {ap[i] = pVal;}
+    for (auto p : mesh->region(MESH::RegionID::Boundary_left))   {ap[p] -= fValEW;}
+    for (auto p : mesh->region(MESH::RegionID::Boundary_right))  {ap[p] -= fValEW;}
+    for (auto p : mesh->region(MESH::RegionID::Boundary_top))    {ap[p] -= fValNS;}
+    for (auto p : mesh->region(MESH::RegionID::Boundary_bottom)) {ap[p] -= fValNS;}
+
+    //East diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){ae[i]   = fValEW;}
+    for (auto p : mesh->region(MESH::RegionID::Boundary_right)) {if (p < ae.size()) { ae[p] = 0.0;}}
+
+    //West diagonal
+    for (size_t i = 0; i < ap.size()-1; ++i){aw[i]   = fValEW;}
+    for (auto p : mesh->region(MESH::RegionID::Boundary_left))  {if (p > 0 && (p - 1) < aw.size()) {aw[p - 1] = 0.0;}}
+
+    //South
+    for (size_t i = 0; i < as.size(); ++i) {as[i] = fValNS;}
+
+    //North
+    for (size_t i = 0; i < an.size(); ++i) {an[i] = fValNS;}
+
+    const GLOBAL::scalar bValEW = 2.0 * mesh->getCellFaceArea_Y() / mesh->getCellSpacing_X();
+    const GLOBAL::scalar bValNS = 2.0 * mesh->getCellFaceArea_X() / mesh->getCellSpacing_Y();
+
+    // NORTH
+    GLOBAL::scalar ypos = mesh->lenY();
+    for( std::size_t i = 0; i < mesh->nbCellsX(); ++i ) {
+        const std::size_t p = i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * mesh->getCellSpacing_X();
+        b[p] -= bValNS * xpos * ypos;
+    }
+    // SOUTH
+    ypos = 0.0;
+    for( std::size_t i = 0; i < mesh->nbCellsX(); ++i ) {
+        const std::size_t p = (mesh->nbCellsY()-1) * mesh->nbCellsX() + i;
+        const GLOBAL::scalar xpos = (0.5 + static_cast<GLOBAL::scalar>(i)) * mesh->getCellSpacing_X();
+        b[p] -= bValNS * xpos * ypos;
+    }
+
+    // EAST
+    GLOBAL::scalar xpos = mesh->lenX();
+    for( std::size_t i = 0; i < mesh->nbCellsY(); ++i ) {
+        const std::size_t p = i * mesh->nbCellsX() + (mesh->nbCellsX()-1);
+        const GLOBAL::scalar ypos = mesh->lenY() - (0.5 + static_cast<GLOBAL::scalar>(i)) * mesh->getCellSpacing_Y();
+        b[p] -= bValEW * xpos * ypos;
+    }
+
+    // WEST
+    xpos = 0.0;
+    for( std::size_t i = 0; i < mesh->nbCellsY(); ++i ) {
+        const std::size_t p = i * mesh->nbCellsX();
+        const GLOBAL::scalar ypos = mesh->lenY() - (0.5 + static_cast<GLOBAL::scalar>(i)) * mesh->getCellSpacing_Y();
+        b[p] -= bValEW * xpos * ypos;
+    }
+    KERNEL::solve(A, u, b, 1e-15, 100000, KERNEL::BiCGSTAB);
+
+    // theoretical solution, vertical mid-line at x = lenx/2
+    // Checking north south direction.
+    KERNEL::vector solution( mesh->nbCellsX(), 0.0 );
+    for (unsigned int i=0; i < mesh->nbCellsX(); i++) {
+        auto x = 0.5*mesh->lenX();
+        auto y = mesh->lenY() - ( 0.5 + i )* mesh->getCellSpacing_Y();
+        solution[i] = x*y;
+    }
+
+    for(int i = 0; i < solution.size(); i++)
+    {
+        auto j = mesh->nbCellsX()/2 + mesh->nbCellsX()*i;
         EXPECT_NEAR(u[j], solution[i],tolerance);
     }
 }
